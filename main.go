@@ -11,6 +11,7 @@ func main() {
 
 	for {
 		var input int
+		fmt.Printf("\n>> ")
 		n, err := fmt.Scanln(&input)
 		if n < 1 || err != nil {
 			fmt.Println("invalid input")
