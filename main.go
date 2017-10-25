@@ -10,10 +10,14 @@ func main() {
 	printHelp()
 
 	for {
-		var input string
-		inpt, _ := fmt.Scanln(&input)
+		var input int
+		n, err := fmt.Scanln(&input)
+		if n < 1 || err != nil {
+			fmt.Println("invalid input")
+			return
+		}
 
-		switch inpt {
+		switch input {
 		case 1:
 			_Create()
 		case 2:

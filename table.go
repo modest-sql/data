@@ -5,9 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
-	"time"
 )
 
 type table struct {
@@ -15,17 +13,15 @@ type table struct {
 }
 
 type field struct {
-	FLOAT32 float32 `json:"Float32"`
-	FLOAT64 float64 `json:"Float64"`
-	UINT32  uint32  `json:"Uint32"`
+	Name int64 `json:"Name"`
 }
 
 func _Create() {
 	_WriteFile()
-	_ReadFile()
 }
 
 func _Read() {
+	_ReadFile()
 }
 
 func _Update() {
@@ -80,22 +76,18 @@ func _WriteFile() {
 	}
 
 	//Debug random tool
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	for i := 0; i < 10; i++ {
 
 		s := &table{
 			field{
-				r.Float32(),
-				r.Float64(),
-				r.Uint32(),
+				Name: 'R',
 			},
 		}
 		var binBuf bytes.Buffer
 		binary.Write(&binBuf, binary.BigEndian, s)
-		//b :=bin_buf.Bytes()
-		//l := len(b)
-		//fmt.Println(l)
+		b := binBuf.Bytes()
+		l := len(b)
+		fmt.Println(l)
 		writeNextBytes(file, binBuf.Bytes())
 
 	}
