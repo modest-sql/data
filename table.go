@@ -8,25 +8,26 @@ import (
 	"os"
 )
 
-type table struct {
-	field `json:"fields"`
+type Table struct {
+
+	Field `json:"field"`
 }
 
-type field struct {
+type Field struct {
 	One float32 `json:"one"`
 	Two float64 `json:"two"`
 	Three uint32 `json:"three"`
 }
 
 func _Create() {
-	_WriteFile(table{field{One: 1.11}})
-	_WriteFile(table{field{Two: 2.22}})
-	_WriteFile(table{field{Three: 3}})
-	_WriteFile(table{field{One: 1.11}})
-	_WriteFile(table{field{Two: 2.22}})
-	_WriteFile(table{field{Three: 3}})
-	_WriteFile(table{field{One: 1.11}})
-	_WriteFile(table{field{Two: 2.22, Three: 3}})
+	_WriteFile(Table{Field{One: 1.11}})
+	_WriteFile(Table{Field{Two: 2.22}})
+	_WriteFile(Table{Field{Three: 3}})
+	_WriteFile(Table{Field{One: 1.11}})
+	_WriteFile(Table{Field{Two: 2.22}})
+	_WriteFile(Table{Field{Three: 3}})
+	_WriteFile(Table{Field{One: 1.11}})
+	_WriteFile(Table{Field{Two: 2.22, Three: 3}})
 }
 
 func _Read() {
@@ -41,23 +42,29 @@ func _Delete() {
 
 }
 
+func _DeleteAll() {
+	
+}
+
 func _GetTable() {
 
 }
 
 func _ReadFile() {
-	file, err := os.Open("data.bin")
+	file,_ := os.Open("data.bin")
 	defer file.Close()
 
 	fi, err := file.Stat()
-	fmt.Println(fi.Size())
+	fmt.Printf("\nFile Size: %d\n\n", fi.Size())
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	m := table{}
-	for i :=0 ; i< 10 ; i++ {
-		data := readNextBytes(file, 16)
+	m := Table{}
+
+	for i :=0 ; i < int(fi.Size()) ; i++ {
+		data := readNextBytes(file, 16) //Tablas todavia manejadas por el tamano fijo
 		buffer := bytes.NewBuffer(data)
 		err = binary.Read(buffer, binary.BigEndian, &m)
 		if err != nil {
@@ -70,16 +77,15 @@ func _ReadFile() {
 func readNextBytes(file *os.File, number int) []byte {
 	bytes := make([]byte, number)
 
-	_, err := file.Read(bytes)
-	if err != nil {
-		log.Fatal(err)
-	}
+	b, _ := file.Read(bytes)
+	fmt.Printf(string(b))
 
 	return bytes
 }
 
-func _WriteFile(class table) {
-	file, err := os.OpenFile("data.bin", os.O_APPEND|os.O_WRONLY, os.ModeAppend) //Everytime calling this funciton file will reset keep that in mind
+func _WriteFile(class Table) {
+
+	file, err := os.OpenFile("data.bin", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	defer file.Close()
 
 	if err != nil {
@@ -105,6 +111,33 @@ func writeNextBytes(file *os.File, bytes []byte) {
 	}
 }
 
-func CreateFile() {
+func _CreateFile() {
+
+		var _, err = os.Stat("data.bin")
+
+		if os.IsNotExist(err) {
+			var file, err = os.Create("data.bin")
+			if isError(err) { 
+				return 
+			}
+			defer file.Close()
+		}
 	
+		fmt.Println("\n==> Done creating file", "data.bin")
+}
+
+func _DeleteFile() {
+
+	var err = os.Remove("data.bin")
+	if isError(err) { return }
+
+	fmt.Println("\n==> Done deleting file")
+}
+
+func isError(err error) bool {
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	return (err != nil)
 }

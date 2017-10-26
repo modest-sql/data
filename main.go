@@ -22,12 +22,14 @@ func main() {
 		case 1:
 			_Create()
 		case 2:
-			_Read()
-		case 3:
 			_GetTable()
+		case 3:
+			_Read()
 		case 4:
-			printHelp()
+			_CreateFile()
 		case 5:
+			_DeleteFile()
+		case 6:
 			os.Exit(2)
 		default:
 			printHelp()
