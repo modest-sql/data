@@ -17,43 +17,43 @@ type Field struct {
 	Name [8]byte `json:"name"`
 }
 
-func _Create() {
+func create() {
 	t := Table{Field: Field{}}
 
 	copy(t.TableName[:], "Empleados")
 	copy(t.Name[:], "Roberto")
-	_WriteFile(t)
+	writeFile(t)
 
 	copy(t.TableName[:], "Clientes")
 	copy(t.Name[:], "Franks")
-	_WriteFile(t)
+	writeFile(t)
 
 	copy(t.TableName[:], "Proveedores")
 	copy(t.Name[:], "Andres")
-	_WriteFile(t)
+	writeFile(t)
 }
 
-func _Read() {
-	_ReadFile()
+func read() {
+	readFile()
 }
 
-func _Update() {
-
-}
-
-func _Delete() {
+func update() {
 
 }
 
-func _DeleteAll() {
+func delete() {
+
+}
+
+func deleteAll() {
 	
 }
 
-func _GetTable() {
+func getTable() {
 
 }
 
-func _ReadFile() {
+func readFile() {
 	file,_ := os.Open("data.bin")
 	defer file.Close()
 
@@ -86,7 +86,7 @@ func readNextBytes(file *os.File, number int) []byte {
 	return bytes
 }
 
-func _WriteFile(class Table) {
+func writeFile(class Table) {
 
 	file, err := os.OpenFile("data.bin", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	defer file.Close()
@@ -114,7 +114,7 @@ func writeNextBytes(file *os.File, bytes []byte) {
 	}
 }
 
-func _CreateFile() {
+func createFile() {
 
 		var _, err = os.Stat("data.bin")
 
@@ -129,7 +129,7 @@ func _CreateFile() {
 		fmt.Println("\n==> Done creating file", "data.bin")
 }
 
-func _DeleteFile() {
+func deleteFile() {
 
 	var err = os.Remove("data.bin")
 	if isError(err) { return }

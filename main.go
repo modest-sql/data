@@ -22,15 +22,15 @@ func main() {
 
 		switch input {
 		case 1:
-			_Create()
+			create()
 		case 2:
-			_GetTable()
+			getTable()
 		case 3:
-			_Read()
+			read()
 		case 4:
-			_CreateFile()
+			createFile()
 		case 5:
-			_DeleteFile()
+			deleteFile()
 		case 6:
 			os.Exit(2)
 		default:
