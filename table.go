@@ -9,19 +9,26 @@ import (
 )
 
 type Table struct {
+	TableName [16]byte `json:"table_name"`
 	Field `json:"field"`
 }
 
 type Field struct {
-	Name [7]byte `json:"name"`
+	Name [8]byte `json:"name"`
 }
 
 func _Create() {
 	t := Table{Field: Field{}}
+
+	copy(t.TableName[:], "Empleados")
 	copy(t.Name[:], "Roberto")
 	_WriteFile(t)
+
+	copy(t.TableName[:], "Clientes")
 	copy(t.Name[:], "Franks")
 	_WriteFile(t)
+
+	copy(t.TableName[:], "Proveedores")
 	copy(t.Name[:], "Andres")
 	_WriteFile(t)
 }
@@ -60,7 +67,7 @@ func _ReadFile() {
 	m := Table{}
 
 	for i :=0 ; i < int(fi.Size()) ; i++ {
-		data := readNextBytes(file, 7) //Tablas todavia manejadas por el tamano fijo
+		data := readNextBytes(file, 24) //Tablas todavia manejadas por el tamano fijo
 		buffer := bytes.NewBuffer(data)
 		err = binary.Read(buffer, binary.BigEndian, &m)
 		if err != nil {
