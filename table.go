@@ -86,7 +86,7 @@ func readNextBytes(file *os.File, number int) []byte {
 	return bytes
 }
 
-func writeFile(class Table) {
+func WriteFile(class Table) {
 
 	file, err := os.OpenFile("data.bin", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	defer file.Close()
@@ -114,7 +114,7 @@ func writeNextBytes(file *os.File, bytes []byte) {
 	}
 }
 
-func createFile() {
+func CreateFile() {
 
 		var _, err = os.Stat("data.bin")
 
