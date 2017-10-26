@@ -13,6 +13,8 @@ func main() {
 		var input int
 		fmt.Printf("\n>> ")
 		n, err := fmt.Scanln(&input)
+		fmt.Println()
+		
 		if n < 1 || err != nil {
 			fmt.Println("invalid input")
 			return

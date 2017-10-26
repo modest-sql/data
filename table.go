@@ -9,7 +9,6 @@ import (
 )
 
 type Table struct {
-
 	Field `json:"field"`
 }
 
@@ -20,14 +19,12 @@ type Field struct {
 }
 
 func _Create() {
-	_WriteFile(Table{Field{One: 1.11}})
-	_WriteFile(Table{Field{Two: 2.22}})
-	_WriteFile(Table{Field{Three: 3}})
-	_WriteFile(Table{Field{One: 1.11}})
-	_WriteFile(Table{Field{Two: 2.22}})
-	_WriteFile(Table{Field{Three: 3}})
-	_WriteFile(Table{Field{One: 1.11}})
-	_WriteFile(Table{Field{Two: 2.22, Three: 3}})
+	_WriteFile(Table{Field: Field{One: 1.11}})
+	_WriteFile(Table{Field: Field{Two: 2.22}})
+	_WriteFile(Table{Field: Field{Three: 3}})
+	_WriteFile(Table{Field: Field{One: 1.11}})
+	_WriteFile(Table{Field: Field{Two: 2.22}})
+	_WriteFile(Table{Field: Field{Two: 2.22, Three: 3}})
 }
 
 func _Read() {
