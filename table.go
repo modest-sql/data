@@ -13,18 +13,17 @@ type Table struct {
 }
 
 type Field struct {
-	One float32 `json:"one"`
-	Two float64 `json:"two"`
-	Three uint32 `json:"three"`
+	Name [7]byte `json:"name"`
 }
 
 func _Create() {
-	_WriteFile(Table{Field: Field{One: 1.11}})
-	_WriteFile(Table{Field: Field{Two: 2.22}})
-	_WriteFile(Table{Field: Field{Three: 3}})
-	_WriteFile(Table{Field: Field{One: 1.11}})
-	_WriteFile(Table{Field: Field{Two: 2.22}})
-	_WriteFile(Table{Field: Field{Two: 2.22, Three: 3}})
+	t := Table{Field: Field{}}
+	copy(t.Name[:], "Roberto")
+	_WriteFile(t)
+	copy(t.Name[:], "Franks")
+	_WriteFile(t)
+	copy(t.Name[:], "Andres")
+	_WriteFile(t)
 }
 
 func _Read() {
@@ -61,7 +60,7 @@ func _ReadFile() {
 	m := Table{}
 
 	for i :=0 ; i < int(fi.Size()) ; i++ {
-		data := readNextBytes(file, 16) //Tablas todavia manejadas por el tamano fijo
+		data := readNextBytes(file, 7) //Tablas todavia manejadas por el tamano fijo
 		buffer := bytes.NewBuffer(data)
 		err = binary.Read(buffer, binary.BigEndian, &m)
 		if err != nil {
