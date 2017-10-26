@@ -28,7 +28,7 @@ func main() {
 		case 3:
 			read()
 		case 4:
-			createFile()
+			CreateFile()
 		case 5:
 			deleteFile()
 		case 6:

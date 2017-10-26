@@ -22,15 +22,15 @@ func create() {
 
 	copy(t.TableName[:], "Empleados")
 	copy(t.Name[:], "Roberto")
-	writeFile(t)
+	WriteFile(t)
 
 	copy(t.TableName[:], "Clientes")
 	copy(t.Name[:], "Franks")
-	writeFile(t)
+	WriteFile(t)
 
 	copy(t.TableName[:], "Proveedores")
 	copy(t.Name[:], "Andres")
-	writeFile(t)
+	WriteFile(t)
 }
 
 func read() {
