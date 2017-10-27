@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"unsafe"
 )
 
 type Table struct {
 	TableName [16]byte `json:"table_name"`
-	Field `json:"field"`
+  Field `json:"field"`
 }
+
 
 type Field struct {
 	Name [8]byte `json:"name"`
@@ -46,7 +48,7 @@ func delete() {
 }
 
 func deleteAll() {
-	
+
 }
 
 func getTable() {
@@ -64,20 +66,22 @@ func readFile() {
 		log.Fatal(err)
 	}
 
-	m := Table{}
+	tb := Table{}
+	iSize := unsafe.Sizeof(tb)
 
+	fmt.Printf("size=[%d]\n", iSize)
 	for i :=0 ; i < int(fi.Size()) ; i++ {
-		data := readNextBytes(file, 24) //Tablas todavia manejadas por el tamano fijo
+		data := readNextBytes(file,iSize)
 		buffer := bytes.NewBuffer(data)
-		err = binary.Read(buffer, binary.BigEndian, &m)
+		err = binary.Read(buffer, binary.BigEndian, &tb)
 		if err != nil {
 			log.Fatal("binary.Read failed", err)
 		}
-		fmt.Println(m)
+		fmt.Println(tb)
 	}
 }
 
-func readNextBytes(file *os.File, number int) []byte {
+func readNextBytes(file *os.File, number uintptr) []byte {
 	bytes := make([]byte, number)
 
 	b, _ := file.Read(bytes)
@@ -120,12 +124,12 @@ func CreateFile() {
 
 		if os.IsNotExist(err) {
 			var file, err = os.Create("data.bin")
-			if isError(err) { 
-				return 
+			if isError(err) {
+				return
 			}
 			defer file.Close()
 		}
-	
+
 		fmt.Println("\n==> Done creating file", "data.bin")
 }
 
