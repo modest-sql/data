@@ -13,6 +13,7 @@ func TestNewDatabase(t *testing.T) {
 	var databaseName string = "test.db"
 	var expectedFirstEntryBlock uint32 = 0
 	var expectedFirstFreeBlock, expectedLastFreeBlock uint32 = 0, 0
+	var expectedFileSize int64 = 128
 
 	db, err := data.NewDatabase(databaseName)
 
@@ -30,6 +31,15 @@ func TestNewDatabase(t *testing.T) {
 
 	if db.LastFreeBlock != expectedLastFreeBlock {
 		t.Errorf("Expected LastFreeBlock to be %d, got %d", expectedLastFreeBlock, db.LastFreeBlock)
+	}
+
+	fileSize, err := db.FileSize()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if fileSize != expectedFileSize {
+		t.Errorf("Expected file size of %d bytes, got %d bytes", expectedFileSize, fileSize)
 	}
 
 	if err := db.Close(); err != nil {
