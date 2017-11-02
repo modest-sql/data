@@ -1,146 +1,201 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"log"
-	"os"
+	"encoding/json"
+	"reflect"
 )
 
 type Table struct {
-	TableName [16]byte `json:"table_name"`
-	Field `json:"field"`
+	TableName [50]byte `json:"Table_Name"`
+	Field
 }
 
 type Field struct {
-	Name [8]byte `json:"name"`
+	Id	int32	`json:"Id"`
+	Name [50]byte `json:"Name"`
 }
 
-func create() {
-	t := Table{Field: Field{}}
+func Create(tableName [50]byte) {
 
-	copy(t.TableName[:], "Empleados")
-	copy(t.Name[:], "Roberto")
-	WriteFile(t)
-
-	copy(t.TableName[:], "Clientes")
-	copy(t.Name[:], "Franks")
-	WriteFile(t)
-
-	copy(t.TableName[:], "Proveedores")
-	copy(t.Name[:], "Andres")
-	WriteFile(t)
-}
-
-func read() {
-	readFile()
-}
-
-func update() {
-
-}
-
-func delete() {
-
-}
-
-func deleteAll() {
+	var jsonText string
 	
-}
+	var idents []Table
 
-func getTable() {
-
-}
-
-func readFile() {
-	file,_ := os.Open("data.bin")
-	defer file.Close()
-
-	fi, err := file.Stat()
-	fmt.Printf("\nFile Size: %d\n\n", fi.Size())
-
-	if err != nil {
-		log.Fatal(err)
+	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
+		log.Println(err)
 	}
 
-	m := Table{}
+	table := Table {
+		TableName: tableName,
+		Field: Field{
+		},
+	}
 
-	for i :=0 ; i < int(fi.Size()) ; i++ {
-		data := readNextBytes(file, 24) //Tablas todavia manejadas por el tamano fijo
-		buffer := bytes.NewBuffer(data)
-		err = binary.Read(buffer, binary.BigEndian, &m)
+	idents = append(idents, table)
+
+	result, err := json.Marshal(idents)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	fmt.Println(string(result))
+
+	WriteFile(result)
+}
+
+func Insert(tableName [50]byte) {
+	
+	var jsonText = ReadFile()
+
+	var idents []Table
+
+	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
+		log.Println(err)
+	}
+
+	var newJsonObj []Table
+
+	for _, jsonObj := range idents{
+		if reflect.DeepEqual(tableName, jsonObj.TableName){
+			jsonObj.Id = getNextId(tableName)
+			copy(jsonObj.Name[:], "Roberto")
+		}
+		
+		newJsonObj = append(newJsonObj, jsonObj)
+	
+		result, err := json.Marshal(newJsonObj)
+	
 		if err != nil {
-			log.Fatal("binary.Read failed", err)
-		}
-		fmt.Println(m)
-	}
-}
-
-func readNextBytes(file *os.File, number int) []byte {
-	bytes := make([]byte, number)
-
-	b, _ := file.Read(bytes)
-	fmt.Printf(string(b))
-
-	return bytes
-}
-
-func WriteFile(class Table) {
-
-	file, err := os.OpenFile("data.bin", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	defer file.Close()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-		var binBuf bytes.Buffer
-		binary.Write(&binBuf, binary.BigEndian, class)
-
-		b := binBuf.Bytes()
-		l := len(b)
-		fmt.Println(l)
-
-		writeNextBytes(file, binBuf.Bytes())
-}
-
-func writeNextBytes(file *os.File, bytes []byte) {
-
-	_, err := file.Write(bytes)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func CreateFile() {
-
-		var _, err = os.Stat("data.bin")
-
-		if os.IsNotExist(err) {
-			var file, err = os.Create("data.bin")
-			if isError(err) { 
-				return 
-			}
-			defer file.Close()
+			log.Println(err)
 		}
 	
-		fmt.Println("\n==> Done creating file", "data.bin")
+		fmt.Println(string(result))
+	
+		WriteFile(result)
+	}
+	return
 }
 
-func deleteFile() {
+func Update(tableName [50]byte, id int32) {
+		
+	var jsonText = ReadFile()
+	var idents []Table
+	
+	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
+		log.Println(err)
+	}
+	
+	var newJsonObj []Table
 
-	var err = os.Remove("data.bin")
-	if isError(err) { return }
-
-	fmt.Println("\n==> Done deleting file")
-}
-
-func isError(err error) bool {
-	if err != nil {
-		fmt.Println(err.Error())
+	for _, jsonObj := range idents{
+		if jsonObj.Id == int32(id){
+			copy(jsonObj.Name[:], "Andres")
+		}
+		newJsonObj = append(newJsonObj, jsonObj)
 	}
 
-	return (err != nil)
+	result, _ := json.Marshal(newJsonObj)
+	fmt.Println(string(result))
+	WriteFile(result)
+}
+
+func getNextId(tableName [50]byte) int32 {
+	
+	var jsonText = ReadFile()
+	var idents []Table
+	
+	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
+		log.Println(err)
+	}
+		
+	current_id := 0
+	last_id := 0
+
+	for _, jsonObj := range idents{
+		if int(jsonObj.Id) > current_id {
+			current_id = int(jsonObj.Id)
+			last_id = current_id
+		} 
+	}
+	fmt.Printf("%d",last_id)
+
+	return int32(current_id + 1)
+}
+
+func ShowRegisters(tableName [50]byte) {
+	var jsonText = ReadFile()
+	
+	var idents []Table
+	
+	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
+		log.Println(err)
+	}
+
+	fmt.Printf("Id |         Nombre         |\n");	
+	fmt.Printf("---|------------------------|\n");
+
+	for _, jsonObj := range idents {
+		if	reflect.DeepEqual(tableName, jsonObj.TableName){
+			fmt.Printf("%d  |%s                 |\n", jsonObj.Id, string(jsonObj.Name[:50]));
+		}
+	}
+	fmt.Println()
+}
+ 
+
+func main() {
+	
+	for {
+		
+		fmt.Printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~Options~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+		fmt.Printf("\n1.insert\tInsert Attributes\n")
+		fmt.Printf("\n2.update\t(Not Implemented correctly)\n")
+		fmt.Printf("\n3.delete\t(Not Implemented)\n")
+		fmt.Printf("\n4.show registers\tShow all registers in file\n")
+		fmt.Printf("\n5.create table\tcreates table\n")
+
+		var input int
+		fmt.Printf("\n>> ")
+		fmt.Scanln(&input)
+		fmt.Println()
+
+		switch input {
+		case 1:
+			var tableName [50]byte
+			copy(tableName[:], "Empleado")
+
+			Insert(tableName)
+			break
+		case 2:
+			var id int32
+			var tableName string
+			fmt.Printf("\nId: ")
+			fmt.Scanln(&id)
+			fmt.Printf("\nTable Name: ")
+			fmt.Scanln(&tableName)
+			fmt.Println()
+
+			//Update(tableName,id)
+			break
+		case 3:
+
+		case 4:
+			var tableName [50]byte
+			copy(tableName[:], "Empleado")
+
+			ShowRegisters(tableName);	
+			break
+		case 5:
+			var tableName [50]byte
+			copy(tableName[:], "Empleado")
+
+			Create(tableName)
+			break
+		default:
+			break
+		}
+	}
 }
