@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/modest-sql/data"
@@ -48,12 +49,13 @@ func TestNewDatabase(t *testing.T) {
 }
 
 func TestLoadDatabase(t *testing.T) {
+	var databasesPath string = filepath.Join(".", "databases")
 	var metadataSize = 128
 	var expectedFirstEntryBlock uint32 = 7
 	var expectedFirstFreeBlock, expectedLastFreeBlock uint32 = 26, 43
 	mockData := []uint32{expectedFirstEntryBlock, expectedFirstFreeBlock, expectedLastFreeBlock}
 
-	mockFile, err := ioutil.TempFile(os.TempDir(), "modestdb")
+	mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +71,7 @@ func TestLoadDatabase(t *testing.T) {
 
 	mockFile.Close()
 
-	db, err := data.LoadDatabase(mockFile.Name())
+	db, err := data.LoadDatabase(filepath.Base(mockFile.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}

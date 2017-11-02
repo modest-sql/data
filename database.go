@@ -2,7 +2,6 @@ package data
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -31,23 +30,34 @@ func NewDatabase(databaseName string) (db *Database, err error) {
 		return nil, err
 	}
 
-	databasePath := filepath.Join(databasesPath, databaseName)
-	databaseFile, err := os.Create(databasePath)
+	databaseFile, err := os.Create(filepath.Join(databasesPath, databaseName))
 	if err != nil {
 		return nil, err
 	}
 
 	db = &Database{file: databaseFile}
 
-	if err := db.syncMetadata(); err != nil {
+	if err := db.writeMetadata(); err != nil {
 		return nil, err
 	}
 
 	return db, nil
 }
 
-func LoadDatabase(databaseName string) (*Database, error) {
-	return nil, errors.New("Not implemented")
+func LoadDatabase(databaseName string) (db *Database, err error) {
+	databasesPath := filepath.Join(".", databasesDirName)
+	databaseFile, err := os.OpenFile(filepath.Join(databasesPath, databaseName), os.O_RDWR, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	db = &Database{file: databaseFile}
+
+	if err := db.readMetadata(); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 func (db Database) FileSize() (int64, error) {
@@ -63,10 +73,18 @@ func (db Database) Close() error {
 	return db.file.Close()
 }
 
-func (db *Database) syncMetadata() error {
+func (db *Database) writeMetadata() error {
 	if _, err := db.file.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 
-	return binary.Write(db.file, binary.LittleEndian, db.DatabaseMetadata)
+	return binary.Write(db.file, binary.LittleEndian, &db.DatabaseMetadata)
+}
+
+func (db *Database) readMetadata() error {
+	if _, err := db.file.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	return binary.Read(db.file, binary.LittleEndian, &db.DatabaseMetadata)
 }
