@@ -10,13 +10,15 @@ import (
 const (
 	databasesDirName  = "databases"
 	metadataBlockSize = 128
+	metadataFields    = 4
 )
 
 type DatabaseMetadata struct {
 	FirstEntryBlock uint32
+	LastEntryBlock  uint32
 	FirstFreeBlock  uint32
 	LastFreeBlock   uint32
-	Padding         [metadataBlockSize - 4*3]byte
+	Padding         [metadataBlockSize - 4*metadataFields]byte
 }
 
 type Database struct {
