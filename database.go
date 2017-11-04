@@ -94,5 +94,9 @@ func (db *Database) readMetadata() error {
 }
 
 func (a Address) offset() int64 {
-	return int64(metadataBlockSize + blockSize*a)
+	if a == 0 {
+		panic("Block address must be greater than 0")
+	}
+
+	return int64(metadataBlockSize + blockSize*(a-1))
 }

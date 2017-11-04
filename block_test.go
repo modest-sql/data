@@ -13,7 +13,7 @@ func TestReadBlock(t *testing.T) {
 	var blocks uint32 = 7
 	var blockNo Address = 4
 	mockData := make([]byte, metadataBlockSize+blockSize*blocks)
-	blockOffset := int(metadataBlockSize + blockSize*blockNo)
+	blockOffset := int(metadataBlockSize + blockSize*(blockNo-1))
 	expectedString := "Modest SQL Database"
 
 	copy(mockData[blockOffset:blockOffset+len(expectedString)], expectedString)
