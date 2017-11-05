@@ -12,8 +12,8 @@ import (
 
 func TestNewDatabase(t *testing.T) {
 	var databaseName string = "test.db"
-	var expectedFirstEntryBlock, expectedLastEntryBlock uint32 = 0, 0
-	var expectedFirstFreeBlock, expectedLastFreeBlock uint32 = 0, 0
+	var expectedFirstEntryBlock, expectedLastEntryBlock data.Address = 0, 0
+	var expectedFirstFreeBlock, expectedLastFreeBlock data.Address = 0, 0
 	var expectedFileSize int64 = 128
 
 	db, err := data.NewDatabase(databaseName)
@@ -55,10 +55,10 @@ func TestNewDatabase(t *testing.T) {
 func TestLoadDatabase(t *testing.T) {
 	var databasesPath string = filepath.Join(".", "databases")
 	var metadataSize = 128
-	var expectedFirstEntryBlock, expectedLastEntryBlock uint32 = 7, 10
-	var expectedFirstFreeBlock, expectedLastFreeBlock uint32 = 26, 43
-	mockData := []uint32{expectedFirstEntryBlock, expectedLastEntryBlock, expectedFirstFreeBlock, expectedLastFreeBlock}
-	mockData = append(mockData, make([]uint32, metadataSize/4-len(mockData))...)
+	var expectedFirstEntryBlock, expectedLastEntryBlock data.Address = 7, 10
+	var expectedFirstFreeBlock, expectedLastFreeBlock data.Address = 26, 43
+	mockData := []data.Address{expectedFirstEntryBlock, expectedLastEntryBlock, expectedFirstFreeBlock, expectedLastFreeBlock}
+	mockData = append(mockData, make([]data.Address, metadataSize/4-len(mockData))...)
 
 	mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
 	if err != nil {
