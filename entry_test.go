@@ -14,16 +14,24 @@ func TestReadTableEntryBlock(t *testing.T) {
 	var expectedNextEntryBlock Address = 4
 	var blockNo Address = 1
 	blockOffset := int(metadataBlockSize + blockSize*(blockNo-1))
-	expectedEntriesCount := 10
+	var expectedEntriesCount uint32 = 10
 
 	mockData := make([]byte, metadataBlockSize+blockSize)
 	blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset])
+
+	if err := binary.Write(blockBuffer, binary.LittleEndian, tableEntryBlockSignature); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := binary.Write(blockBuffer, binary.LittleEndian, expectedNextEntryBlock); err != nil {
 		t.Fatal(err)
 	}
 
-	for i := 0; i < expectedEntriesCount; i++ {
+	if err := binary.Write(blockBuffer, binary.LittleEndian, expectedEntriesCount); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := uint32(0); i < expectedEntriesCount; i++ {
 		entry := &tableEntry{}
 
 		if err := binary.Write(blockBuffer, binary.LittleEndian, entry); err != nil {
@@ -57,33 +65,66 @@ func TestReadTableEntryBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if entryBlock.nextEntryBlock != expectedNextEntryBlock {
-		t.Errorf("Expected nextEntryBlock to be %d, got %d", expectedNextEntryBlock, entryBlock.nextEntryBlock)
+	if entryBlock.NextEntryBlock != expectedNextEntryBlock {
+		t.Errorf("Expected nextEntryBlock to be %d, got %d", expectedNextEntryBlock, entryBlock.NextEntryBlock)
 	}
 
-	if entriesCount := len(entryBlock.tableEntries); entriesCount != expectedEntriesCount {
-		t.Errorf("Expected table entry block to have %d entries, got %d", expectedEntriesCount, entriesCount)
+	if entryBlock.EntriesCount != expectedEntriesCount {
+		t.Errorf("Expected table entry block to have %d entries, got %d", expectedEntriesCount, entryBlock.EntriesCount)
+	}
+
+	if entriesCount := uint32(len(entryBlock.TableEntries())); entriesCount != entryBlock.EntriesCount {
+		t.Errorf("Entry count in TableEntryBlock does not match actual length of table entries array, expected %d, got %d", entriesCount, entryBlock.EntriesCount)
 	}
 }
 
 func TestFindTableEntry(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	var nextEntryBlock Address
-	var blockNo Address = 1
-	blockOffset := int(metadataBlockSize + blockSize*(blockNo-1))
+	var blockNo Address = 4
+	blockCount := 4
 	expectedTableNames := []string{"MOVIES", "THEATERS", "FUNCTIONS", "HALLS"}
 	expectedHeaderBlocks := []Address{7, 12, 14, 20}
+	mockData := make([]byte, metadataBlockSize+blockSize*blockCount)
 
-	mockData := make([]byte, metadataBlockSize+blockSize)
-	blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset])
+	blockOffset := func(blockNo Address) int {
+		return int(metadataBlockSize + blockSize*(blockNo-1))
+	}
+
+	writeMockBlock := func(blockNo Address) {
+		var nextEntryBlock Address
+		blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset(blockNo)])
+
+		if int(blockNo) < blockCount {
+			nextEntryBlock = blockNo + 1
+		}
+
+		if err := binary.Write(blockBuffer, binary.LittleEndian, tableEntryBlockSignature); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := binary.Write(blockBuffer, binary.LittleEndian, nextEntryBlock); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := binary.Write(blockBuffer, binary.LittleEndian, uint32(0)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	writeMockBlock(1)
+	writeMockBlock(2)
+	writeMockBlock(3)
+
+	blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset(blockNo)])
 
 	if err := binary.Write(blockBuffer, binary.LittleEndian, nextEntryBlock); err != nil {
 		t.Fatal(err)
 	}
 
 	for i, expectedTableName := range expectedTableNames {
-		entry := &tableEntry{headerBlock: expectedHeaderBlocks[i]}
-		copy(entry.tableName[:], expectedTableName)
+		entry := &tableEntry{HeaderBlock: expectedHeaderBlocks[i]}
+		copy(entry.TableNameArray[:], expectedTableName)
 
 		if err := binary.Write(blockBuffer, binary.LittleEndian, entry); err != nil {
 			t.Fatal(err)
@@ -121,8 +162,8 @@ func TestFindTableEntry(t *testing.T) {
 			t.Errorf("Expected TableEntry with name `%s', none found", expectedTableName)
 		}
 
-		if entry.headerBlock != expectedHeaderBlocks[i] {
-			t.Errorf("Expected TableEntry with name `%s' to have header block %d, got %d", expectedTableName, expectedHeaderBlocks[i], entry.headerBlock)
+		if entry.HeaderBlock != expectedHeaderBlocks[i] {
+			t.Errorf("Expected TableEntry with name `%s' to have header block %d, got %d", expectedTableName, expectedHeaderBlocks[i], entry.HeaderBlock)
 		}
 	}
 }
