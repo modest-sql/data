@@ -10,7 +10,7 @@ import (
 const (
 	maxTableNameLength         = 60
 	maxTableEntries            = 63
-	tableEntryBlockPaddingSize = 51
+	tableEntryBlockPaddingSize = 52
 )
 
 type tableEntries [maxTableEntries]tableEntry
@@ -21,7 +21,6 @@ type tableEntryBlock struct {
 	EntriesCount      uint32
 	TableEntriesArray tableEntries
 	Padding           [tableEntryBlockPaddingSize]byte
-	_                 byte
 }
 
 func (e tableEntryBlock) tableEntries() []tableEntry {

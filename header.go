@@ -12,7 +12,7 @@ type tableColumns [maxTableColumns]tableColumn
 const (
 	maxColumnNameLength         = 60
 	maxTableColumns             = 63
-	tableHeaderBlockPaddingSize = 47
+	tableHeaderBlockPaddingSize = 48
 )
 
 const (
@@ -30,7 +30,6 @@ type tableHeaderBlock struct {
 	ColumnCount       uint32
 	TableColumnsArray tableColumns
 	Padding           [tableHeaderBlockPaddingSize]byte
-	_                 byte
 }
 
 func (h tableHeaderBlock) TableColumns() []tableColumn {
