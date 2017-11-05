@@ -25,3 +25,8 @@ func (db Database) readBlock(blockNo Address) (b block, err error) {
 
 	return b, nil
 }
+
+func (db Database) writeBlock(blockNo Address, block block) (err error) {
+	_, err = db.file.WriteAt(block[:], blockNo.offset())
+	return err
+}
