@@ -26,8 +26,9 @@ func TestHeader(t *testing.T) {
 	}
 
 	expectedTableHeaderBlock := tableHeaderBlock{
-		Signature: tableHeaderBlockSignature,
-		TableColumns: tableColumns{
+		Signature:   tableHeaderBlockSignature,
+		ColumnCount: 2,
+		TableColumnsArray: tableColumns{
 			tableColumn{ColumnNameArray: name("ID_MOVIE"), DataType: integer},
 			tableColumn{ColumnNameArray: name("TITLE"), DataType: char, Size: 5},
 		}}
@@ -75,7 +76,7 @@ func TestHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tableHeader, err := tableEntry.header()
+	tableHeader, err := db.readHeaderBlock(tableEntry.HeaderBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,21 +85,21 @@ func TestHeader(t *testing.T) {
 		t.Errorf("Expected FirstRecordBlock to be %d, got %d", expectedTableHeaderBlock.FirstRecordBlock, tableHeader.FirstRecordBlock)
 	}
 
-	for _, tableColumn := range tableHeader.TableColumns {
-		for _, expectedTableColumn := range expectedTableHeaderBlock.TableColumns {
-			if tableColumn.ColumnName() != expectedTableColumn.ColumnName() {
-				t.Errorf("Expected column name to be %s, got %s", expectedTableColumn.ColumnName(), tableColumn.ColumnName())
-				continue
-			}
+	for i, tableColumn := range tableHeader.TableColumns() {
+		expectedTableColumn := expectedTableHeaderBlock.TableColumnsArray[i]
 
-			if tableColumn.DataType != expectedTableColumn.DataType {
-				t.Errorf("Expected column data type to be %s, got %s", dataTypeNames[expectedTableColumn.DataType], dataTypeNames[tableColumn.DataType])
-				continue
-			}
+		if tableColumn.ColumnName() != expectedTableColumn.ColumnName() {
+			t.Errorf("Expected column name to be %s, got %s", expectedTableColumn.ColumnName(), tableColumn.ColumnName())
+			continue
+		}
 
-			if tableColumn.Size != expectedTableColumn.Size {
-				t.Errorf("Expected column size to be %d, got %d", expectedTableColumn.Size, tableColumn.Size)
-			}
+		if tableColumn.DataType != expectedTableColumn.DataType {
+			t.Errorf("Expected column data type to be %s, got %s", dataTypeNames[expectedTableColumn.DataType], dataTypeNames[tableColumn.DataType])
+			continue
+		}
+
+		if tableColumn.Size != expectedTableColumn.Size {
+			t.Errorf("Expected column size to be %d, got %d", expectedTableColumn.Size, tableColumn.Size)
 		}
 	}
 }

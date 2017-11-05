@@ -2,7 +2,8 @@ package data
 
 import (
 	"bytes"
-	"errors"
+	"encoding/binary"
+	"fmt"
 )
 
 type dataType uint16
@@ -11,7 +12,7 @@ type tableColumns [maxTableColumns]tableColumn
 const (
 	maxColumnNameLength         = 60
 	maxTableColumns             = 63
-	tableHeaderBlockPaddingSize = 51
+	tableHeaderBlockPaddingSize = 47
 )
 
 const (
@@ -23,12 +24,17 @@ const (
 )
 
 type tableHeaderBlock struct {
-	Signature        blockSignature
-	NextHeaderBlock  Address
-	FirstRecordBlock Address
-	TableColumns     tableColumns
-	Padding          [tableHeaderBlockPaddingSize]byte
-	_                byte
+	Signature         blockSignature
+	NextHeaderBlock   Address
+	FirstRecordBlock  Address
+	ColumnCount       uint32
+	TableColumnsArray tableColumns
+	Padding           [tableHeaderBlockPaddingSize]byte
+	_                 byte
+}
+
+func (h tableHeaderBlock) TableColumns() []tableColumn {
+	return h.TableColumnsArray[:h.ColumnCount]
 }
 
 type tableColumn struct {
@@ -45,6 +51,22 @@ func (c tableColumn) SetColumnName(columnName string) {
 	copy(c.ColumnNameArray[:], columnName)
 }
 
-func (e tableEntry) header() (*tableHeaderBlock, error) {
-	return nil, errors.New("Not implemented")
+func (db Database) readHeaderBlock(blockNo Address) (*tableHeaderBlock, error) {
+	block, err := db.readBlock(blockNo)
+	if err != nil {
+		return nil, err
+	}
+
+	buffer := bytes.NewBuffer(block[:])
+	tableHeaderBlock := &tableHeaderBlock{}
+
+	if err := binary.Read(buffer, binary.LittleEndian, tableHeaderBlock); err != nil {
+		return nil, err
+	}
+
+	if tableHeaderBlock.Signature != tableHeaderBlockSignature {
+		return nil, fmt.Errorf("Block %d is not a TableHeaderBlock", blockNo)
+	}
+
+	return tableHeaderBlock, nil
 }
