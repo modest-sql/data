@@ -8,6 +8,7 @@ type blockSignature uint32
 
 const (
 	blockSize                               = 4096
+	nullBlockNo              Address        = 0
 	tableEntryBlockSignature blockSignature = 0xff77ff77
 )
 

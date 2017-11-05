@@ -73,16 +73,16 @@ func TestReadTableEntryBlock(t *testing.T) {
 		t.Errorf("Expected table entry block to have %d entries, got %d", expectedEntriesCount, entryBlock.EntriesCount)
 	}
 
-	if entriesCount := uint32(len(entryBlock.TableEntries())); entriesCount != entryBlock.EntriesCount {
+	if entriesCount := uint32(len(entryBlock.tableEntries())); entriesCount != entryBlock.EntriesCount {
 		t.Errorf("Entry count in TableEntryBlock does not match actual length of table entries array, expected %d, got %d", entriesCount, entryBlock.EntriesCount)
 	}
 }
 
 func TestFindTableEntry(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
-	var nextEntryBlock Address
 	var blockNo Address = 4
 	blockCount := 4
+	firstEntryBlock := byte(1)
 	expectedTableNames := []string{"MOVIES", "THEATERS", "FUNCTIONS", "HALLS"}
 	expectedHeaderBlocks := []Address{7, 12, 14, 20}
 	mockData := make([]byte, metadataBlockSize+blockSize*blockCount)
@@ -90,6 +90,8 @@ func TestFindTableEntry(t *testing.T) {
 	blockOffset := func(blockNo Address) int {
 		return int(metadataBlockSize + blockSize*(blockNo-1))
 	}
+
+	mockData[0] = firstEntryBlock
 
 	writeMockBlock := func(blockNo Address) {
 		var nextEntryBlock Address
@@ -118,7 +120,15 @@ func TestFindTableEntry(t *testing.T) {
 
 	blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset(blockNo)])
 
-	if err := binary.Write(blockBuffer, binary.LittleEndian, nextEntryBlock); err != nil {
+	if err := binary.Write(blockBuffer, binary.LittleEndian, tableEntryBlockSignature); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := binary.Write(blockBuffer, binary.LittleEndian, nullBlockNo); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := binary.Write(blockBuffer, binary.LittleEndian, uint32(len(expectedTableNames))); err != nil {
 		t.Fatal(err)
 	}
 
@@ -159,7 +169,7 @@ func TestFindTableEntry(t *testing.T) {
 		}
 
 		if entry == nil {
-			t.Errorf("Expected TableEntry with name `%s', none found", expectedTableName)
+			t.Fatalf("Expected TableEntry with name `%s', none found", expectedTableName)
 		}
 
 		if entry.HeaderBlock != expectedHeaderBlocks[i] {

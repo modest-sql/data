@@ -1,9 +1,11 @@
 package data
 
-import "errors"
-import "bytes"
-import "encoding/binary"
-import "fmt"
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"strings"
+)
 
 const (
 	maxTableNameLength         = 60
@@ -21,8 +23,20 @@ type tableEntryBlock struct {
 	Padding           [tableEntryBlockPaddingSize]byte
 }
 
-func (e tableEntryBlock) TableEntries() []tableEntry {
+func (e tableEntryBlock) tableEntries() []tableEntry {
 	return e.TableEntriesArray[:e.EntriesCount]
+}
+
+func (e tableEntryBlock) findTableEntry(tableName string) *tableEntry {
+	tableEntries := e.tableEntries()
+
+	for i := range tableEntries {
+		if tableEntries[i].TableName() == strings.ToUpper(tableName) {
+			return &tableEntries[i]
+		}
+	}
+
+	return nil
 }
 
 type tableEntry struct {
@@ -31,7 +45,7 @@ type tableEntry struct {
 }
 
 func (t tableEntry) TableName() string {
-	return string(t.TableNameArray[:])
+	return string(bytes.TrimRight(t.TableNameArray[:], "\x00"))
 }
 
 func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error) {
@@ -55,5 +69,18 @@ func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, erro
 }
 
 func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
-	return nil, errors.New("Not implemented")
+	for blockNo := db.FirstEntryBlock; blockNo != nullBlockNo; {
+		tableEntryBlock, err := db.readTableEntryBlock(blockNo)
+		if err != nil {
+			return nil, err
+		}
+
+		if tableEntry := tableEntryBlock.findTableEntry(tableName); tableEntry != nil {
+			return tableEntry, nil
+		}
+
+		blockNo = tableEntryBlock.NextEntryBlock
+	}
+
+	return nil, nil
 }
