@@ -182,10 +182,12 @@ func TestReadTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rows, err := db.ReadTable(tableName)
+	resultSet, err := db.ReadTable(tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	rows := resultSet.Rows
 
 	if rowCount := len(rows); rowCount != expectedMockRecordsCount {
 		t.Fatalf("Expected to read %d rows, got %d", expectedMockRecordsCount, rowCount)

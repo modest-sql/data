@@ -13,6 +13,11 @@ type TableColumn struct {
 	ColumnSize uint16
 }
 
+type ResultSet struct {
+	Keys []string
+	Rows []Row
+}
+
 func (db Database) FindTable(tableName string) (*Table, error) {
 	tableEntry, err := db.findTableEntry(tableName)
 	if err != nil {
@@ -27,7 +32,7 @@ func (db Database) FindTable(tableName string) (*Table, error) {
 	return tableHeaderBlock.Table(tableEntry.TableName()), nil
 }
 
-func (db Database) ReadTable(tableName string) (rows []Row, err error) {
+func (db Database) ReadTable(tableName string) (*ResultSet, error) {
 	tableEntry, err := db.findTableEntry(tableName)
 	if err != nil {
 		return nil, err
@@ -41,6 +46,7 @@ func (db Database) ReadTable(tableName string) (rows []Row, err error) {
 	recordSize, readers := tableHeaderBlock.recordReaders()
 	tableColumns := tableHeaderBlock.TableColumns()
 
+	rows := []Row{}
 	for recordBlockNo := tableHeaderBlock.FirstRecordBlock; recordBlockNo != nullBlockNo; {
 		recordBlock, err := db.readRecordBlock(tableHeaderBlock.FirstRecordBlock)
 		if err != nil {
@@ -64,5 +70,11 @@ func (db Database) ReadTable(tableName string) (rows []Row, err error) {
 
 		recordBlockNo = recordBlock.NextRecordBlock
 	}
-	return rows, nil
+
+	keys := []string{}
+	for _, tableColumn := range tableColumns {
+		keys = append(keys, tableColumn.ColumnName())
+	}
+
+	return &ResultSet{Keys: keys, Rows: rows}, nil
 }
