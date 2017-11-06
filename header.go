@@ -36,6 +36,23 @@ func (h tableHeaderBlock) TableColumns() []tableColumn {
 	return h.TableColumnsArray[:h.ColumnCount]
 }
 
+func (h tableHeaderBlock) Table(tableName string) *Table {
+	tableColumns := []TableColumn{}
+
+	for _, c := range h.TableColumns() {
+		tableColumns = append(tableColumns, TableColumn{
+			ColumnName: c.ColumnName(),
+			ColumnType: c.DataType,
+			ColumnSize: c.Size,
+		})
+	}
+
+	return &Table{
+		TableName:    tableName,
+		TableColumns: tableColumns,
+	}
+}
+
 type tableColumn struct {
 	DataType        dataType
 	Size            uint16
