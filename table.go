@@ -1,54 +1,75 @@
 package data
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"reflect"
 )
 
 // Table --
 type Table struct {
-	TableName [60]byte `json:"table"`
-	Field     `json:"field"`
+	IDMovie int
+	Title   [30]byte
 }
 
-// Field --
-type Field struct {
-	Column []string `json:"column"`
-	IsKey  bool     `json:"Key"`
+// Buffer --
+type Buffer struct {
+	records map[string][]interface{}
 }
 
 // NewTable --
 func (db *Database) NewTable(tableName string) (*Table, error) {
 
-	table := Table{}
-	copy(table.TableName[:], tableName)
+	table := &Table{}
 
-	return &table, nil
+	return table, nil
 }
 
 // FindTable --
-func (db *Database) FindTable(tableName string) (*Table, error) {
-	databaseFile, _ := LoadDatabase("test.db")
+func (db *Database) FindTable(tableName string, blockNo Address) (*Table, error) {
 
-	byteValue, _ := ioutil.ReadAll(databaseFile.file)
-	var idents []Table
-	json.Unmarshal(byteValue, &idents)
+	record, _ := db.readRecordBlock(blockNo)
+	myData := make(map[string]interface{})
+	myData[tableName] = record.Data
 
-	for _, json := range idents {
-		if reflect.DeepEqual(tableName, json.TableName) {
-			return &json, nil
-		}
+	result := &Table{}
+	err := result.fillStruct(myData)
+	if err != nil {
+		return nil, err
 	}
-	return nil, nil
+	return result, nil
 }
 
-// Insert --
-func (t *Table) Insert(columns []string, values []interface{}) error {
+// fillStruct --
+func (t *Table) fillStruct(m map[string]interface{}) error {
+	for k, v := range m {
+		err := setField(t, k, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	table := Table{Field: Field{Column: columns}}
+// setField --
+func setField(obj interface{}, title string, value interface{}) error {
+	structValue := reflect.ValueOf(obj).Elem()
+	structFieldValue := structValue.FieldByName(title)
 
-	fmt.Println(table)
+	if !structFieldValue.IsValid() {
+		return fmt.Errorf("No such field: %s in obj", title)
+	}
+
+	if !structFieldValue.CanSet() {
+		return fmt.Errorf("Cannot set %s field value", title)
+	}
+
+	structFieldType := structFieldValue.Type()
+	val := reflect.ValueOf(value)
+	if structFieldType != val.Type() {
+		return errors.New("Provided value type didn't match obj field type")
+	}
+
+	structFieldValue.Set(val)
 	return nil
 }

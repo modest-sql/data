@@ -13,11 +13,13 @@ const (
 	metadataFields    = 4
 )
 
+type Address uint32
+
 type DatabaseMetadata struct {
-	FirstEntryBlock uint32
-	LastEntryBlock  uint32
-	FirstFreeBlock  uint32
-	LastFreeBlock   uint32
+	FirstEntryBlock Address
+	LastEntryBlock  Address
+	FirstFreeBlock  Address
+	LastFreeBlock   Address
 	Padding         [metadataBlockSize - 4*metadataFields]byte
 }
 
@@ -89,4 +91,12 @@ func (db *Database) readMetadata() error {
 	}
 
 	return binary.Read(db.file, binary.LittleEndian, &db.DatabaseMetadata)
+}
+
+func (a Address) offset() int64 {
+	if a == 0 {
+		panic("Block address must be greater than 0")
+	}
+
+	return int64(metadataBlockSize + blockSize*(a-1))
 }

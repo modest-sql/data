@@ -10,9 +10,10 @@ import (
 
 func TestReadBlock(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
-	var blocks, blockNo uint32 = 7, 4
+	var blocks uint32 = 7
+	var blockNo Address = 4
 	mockData := make([]byte, metadataBlockSize+blockSize*blocks)
-	blockOffset := int(metadataBlockSize + blockSize*blockNo)
+	blockOffset := int(metadataBlockSize + blockSize*(blockNo-1))
 	expectedString := "Modest SQL Database"
 
 	copy(mockData[blockOffset:blockOffset+len(expectedString)], expectedString)
@@ -48,4 +49,42 @@ func TestReadBlock(t *testing.T) {
 	if dataString != expectedString {
 		t.Errorf("Expected to read string `%s' from block, got `%s'", expectedString, dataString)
 	}
+}
+
+func TestBlockSizes(t *testing.T) {
+	t.Run("DatabaseMetadataBlock", func(t *testing.T) {
+		b := DatabaseMetadata{}
+		size := binary.Size(b)
+
+		if size != metadataBlockSize {
+			t.Errorf("Expected metadata block size to be %d, got %d", metadataBlockSize, size)
+		}
+	})
+
+	t.Run("TableEntryBlock", func(t *testing.T) {
+		b := tableEntryBlock{}
+		size := binary.Size(b)
+
+		if size != blockSize {
+			t.Errorf("Expected table entry block size to be %d, got %d", blockSize, size)
+		}
+	})
+
+	t.Run("TableHeaderBlock", func(t *testing.T) {
+		b := tableHeaderBlock{}
+		size := binary.Size(b)
+
+		if size != blockSize {
+			t.Errorf("Expected table header block size to be %d, got %d", blockSize, size)
+		}
+	})
+
+	t.Run("RecordBlock", func(t *testing.T) {
+		b := recordBlock{}
+		size := binary.Size(b)
+
+		if size != blockSize {
+			t.Errorf("Expected record block size to be %d, got %d", blockSize, size)
+		}
+	})
 }

@@ -1,15 +1,27 @@
 package data
 
-const blockSize = 4096
+import (
+	"encoding/binary"
+)
+
+type blockSignature uint32
+
+const (
+	blockSize                                = 4096
+	nullBlockNo               Address        = 0
+	tableEntryBlockSignature  blockSignature = 0xff77ff77
+	tableHeaderBlockSignature blockSignature = 0xee11ee11
+	recordBlockSignature      blockSignature = 0xaa88aa88
+)
 
 type block [blockSize]byte
 
-func blockOffset(blockNo uint32) int64 {
-	return int64(metadataBlockSize + blockNo*blockSize)
+func (b block) signature() blockSignature {
+	return blockSignature(binary.LittleEndian.Uint32(b[:4]))
 }
 
-func (db Database) readBlock(blockNo uint32) (b block, err error) {
-	if _, err = db.file.ReadAt(b[:], blockOffset(blockNo)); err != nil {
+func (db Database) readBlock(blockNo Address) (b block, err error) {
+	if _, err = db.file.ReadAt(b[:], blockNo.offset()); err != nil {
 		return b, err
 	}
 	return b, nil
