@@ -1,6 +1,5 @@
 
 databases/*
-!databases/mock.db
 
 # Created by https://www.gitignore.io/api/go
 
