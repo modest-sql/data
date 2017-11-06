@@ -189,8 +189,8 @@ func TestReadTable(t *testing.T) {
 
 		if val, ok := row["TITLE"]; !ok {
 			t.Fatalf("Row %d does not contain column %s", i, "TITLE")
-		} else if val != mockRecords[i].Title {
-			t.Errorf("Expected TITLE `%s', got `%s'", mockRecords[i].Title, val)
+		} else if expectedTitle := string(bytes.TrimRight(mockRecords[i].Title[:], "\x00")); val != expectedTitle {
+			t.Errorf("Expected TITLE `%s', got `%s'", expectedTitle, val)
 		}
 	}
 }
