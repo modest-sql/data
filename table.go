@@ -39,11 +39,11 @@ func (db Database) ReadTable(tableName string) (rows []Row, err error) {
 	}
 
 	for recordBlockNo := tableHeaderBlock.FirstRecordBlock; recordBlockNo != nullBlockNo; {
-		nextRecordBlock, err := db.readRecordBlock(tableEntry.HeaderBlock)
+		recordBlock, err := db.readRecordBlock(tableHeaderBlock.FirstRecordBlock)
 		if err != nil {
 			return nil, err
 		}
-		recordBlockNo = nextRecordBlock.NextRecordBlock
+		recordBlockNo = recordBlock.NextRecordBlock
 	}
 	return rows, nil
 }
