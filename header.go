@@ -60,21 +60,48 @@ func (h tableHeaderBlock) Table(tableName string) *Table {
 	}
 }
 
-func (h tableHeaderBlock) columnOffsets() (size int, offsets map[string]int) {
-	offsets = map[string]int{}
+type recordReader func(record) interface{}
+
+func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordReader) {
+	readers = map[string]recordReader{}
 	size = freeFlagSize
 
 	for _, column := range h.TableColumns() {
-		offsets[column.ColumnName()] = int(size)
+		columnName := column.ColumnName()
+		offset := size
 
 		if column.DataType == char {
 			size += int(column.Size)
 		} else {
 			size += dataTypeSizes[column.DataType]
 		}
+
+		switch column.DataType {
+		case integer:
+			readers[columnName] = func(r record) interface{} {
+				return int32(binary.LittleEndian.Uint32(r[offset : offset+4]))
+			}
+		case float:
+			readers[columnName] = func(r record) interface{} {
+				return float32(binary.LittleEndian.Uint32(r[offset : offset+4]))
+			}
+		case datetime:
+			readers[columnName] = func(r record) interface{} {
+				return int32(binary.LittleEndian.Uint32(r[offset : offset+4]))
+			}
+		case boolean:
+			readers[columnName] = func(r record) interface{} {
+				return r[offset] != 0
+			}
+		case char:
+			readers[columnName] = func(r record) interface{} {
+				return string(bytes.TrimRight(r[offset:size], "\x00"))
+			}
+		}
+
 	}
 
-	return size, offsets
+	return size, readers
 }
 
 type tableColumn struct {

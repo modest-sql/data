@@ -32,26 +32,6 @@ func (r record) isFree() bool {
 	return binary.LittleEndian.Uint32(r[:4]) == freeFlag
 }
 
-func (r record) readInteger(offset int) int32 {
-	return int32(binary.LittleEndian.Uint32(r[offset : offset+4]))
-}
-
-func (r record) readFloat(offset int) float32 {
-	return float32(r.readInteger(offset))
-}
-
-func (r record) readBoolean(offset int) bool {
-	return r[offset] != 0
-}
-
-func (r record) readDatetime(offset int) int32 {
-	return r.readInteger(offset)
-}
-
-func (r record) readChar(offset int, size int) string {
-	return string(bytes.TrimRight(r[offset:offset+size], "\x00"))
-}
-
 type recordBlock struct {
 	Signature       blockSignature
 	NextRecordBlock Address
