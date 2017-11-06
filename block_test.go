@@ -78,4 +78,13 @@ func TestBlockSizes(t *testing.T) {
 			t.Errorf("Expected table header block size to be %d, got %d", blockSize, size)
 		}
 	})
+
+	t.Run("RecordBlock", func(t *testing.T) {
+		b := recordBlock{}
+		size := binary.Size(b)
+
+		if size != blockSize {
+			t.Errorf("Expected record block size to be %d, got %d", blockSize, size)
+		}
+	})
 }

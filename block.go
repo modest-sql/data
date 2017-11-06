@@ -11,6 +11,7 @@ const (
 	nullBlockNo               Address        = 0
 	tableEntryBlockSignature  blockSignature = 0xff77ff77
 	tableHeaderBlockSignature blockSignature = 0xee11ee11
+	recordBlockSignature      blockSignature = 0xaa88aa88
 )
 
 type block [blockSize]byte
