@@ -158,11 +158,10 @@ func TestReadTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
+	mockFile, err := os.Create(filepath.Join("databases", "mock.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(mockFile.Name())
 
 	buffer := bytes.NewBuffer(nil)
 	if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
