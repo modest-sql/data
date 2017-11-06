@@ -37,8 +37,9 @@ func TestReadRecordBlock(t *testing.T) {
 				tableEntry{HeaderBlock: 2, TableNameArray: name("MOVIES")}},
 		},
 		tableHeaderBlock: tableHeaderBlock{
-			Signature:   tableHeaderBlockSignature,
-			ColumnCount: 2,
+			Signature:        tableHeaderBlockSignature,
+			FirstRecordBlock: 3,
+			ColumnCount:      2,
 			TableColumnsArray: tableColumns{
 				tableColumn{ColumnNameArray: name("ID_MOVIE"), DataType: integer},
 				tableColumn{ColumnNameArray: name("TITLE"), DataType: char, Size: 30},
