@@ -50,3 +50,32 @@ func TestReadBlock(t *testing.T) {
 		t.Errorf("Expected to read string `%s' from block, got `%s'", expectedString, dataString)
 	}
 }
+
+func TestBlockSizes(t *testing.T) {
+	t.Run("DatabaseMetadataBlock", func(t *testing.T) {
+		b := DatabaseMetadata{}
+		size := binary.Size(b)
+
+		if size != metadataBlockSize {
+			t.Errorf("Expected metadata block size to be %d, got %d", metadataBlockSize, size)
+		}
+	})
+
+	t.Run("TableEntryBlock", func(t *testing.T) {
+		b := tableEntryBlock{}
+		size := binary.Size(b)
+
+		if size != blockSize {
+			t.Errorf("Expected table entry block size to be %d, got %d", blockSize, size)
+		}
+	})
+
+	t.Run("TableHeaderBlock", func(t *testing.T) {
+		b := tableHeaderBlock{}
+		size := binary.Size(b)
+
+		if size != blockSize {
+			t.Errorf("Expected table header block size to be %d, got %d", blockSize, size)
+		}
+	})
+}

@@ -10,7 +10,7 @@ import (
 const (
 	maxTableNameLength         = 60
 	maxTableEntries            = 63
-	tableEntryBlockPaddingSize = 47
+	tableEntryBlockPaddingSize = 52
 )
 
 type tableEntries [maxTableEntries]tableEntry
@@ -40,12 +40,16 @@ func (e tableEntryBlock) findTableEntry(tableName string) *tableEntry {
 }
 
 type tableEntry struct {
-	TableNameArray [maxTableNameLength]byte
 	HeaderBlock    Address
+	TableNameArray [maxTableNameLength]byte
 }
 
 func (t tableEntry) TableName() string {
 	return string(bytes.TrimRight(t.TableNameArray[:], "\x00"))
+}
+
+func (t tableEntry) SetTableName(tableName string) {
+	copy(t.TableNameArray[:], tableName)
 }
 
 func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error) {

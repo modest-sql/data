@@ -7,9 +7,10 @@ import (
 type blockSignature uint32
 
 const (
-	blockSize                               = 4096
-	nullBlockNo              Address        = 0
-	tableEntryBlockSignature blockSignature = 0xff77ff77
+	blockSize                                = 4096
+	nullBlockNo               Address        = 0
+	tableEntryBlockSignature  blockSignature = 0xff77ff77
+	tableHeaderBlockSignature blockSignature = 0xee11ee11
 )
 
 type block [blockSize]byte
