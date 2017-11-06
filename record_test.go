@@ -50,12 +50,13 @@ func TestReadRecordBlock(t *testing.T) {
 	}
 
 	mockRecords := [3]struct {
-		IDMovie uint32
-		Title   [30]byte
+		FreeFlag uint32
+		IDMovie  uint32
+		Title    [30]byte
 	}{
-		{0, movieTitle("Lord of the Rings")},
-		{1, movieTitle("Harry Potter")},
-		{2, movieTitle("Avengers")},
+		{0, 0, movieTitle("Lord of the Rings")},
+		{0, 1, movieTitle("Harry Potter")},
+		{0, 2, movieTitle("Avengers")},
 	}
 
 	if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
