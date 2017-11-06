@@ -1,7 +1,5 @@
 package data
 
-import "errors"
-
 type Row map[string]interface{}
 
 type Table struct {
@@ -30,5 +28,22 @@ func (db Database) FindTable(tableName string) (*Table, error) {
 }
 
 func (db Database) ReadTable(tableName string) (rows []Row, err error) {
-	return rows, errors.New("Not implemented")
+	tableEntry, err := db.findTableEntry(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	for recordBlockNo := tableHeaderBlock.FirstRecordBlock; recordBlockNo != nullBlockNo; {
+		nextRecordBlock, err := db.readRecordBlock(tableEntry.HeaderBlock)
+		if err != nil {
+			return nil, err
+		}
+		recordBlockNo = nextRecordBlock.NextRecordBlock
+	}
+	return rows, nil
 }

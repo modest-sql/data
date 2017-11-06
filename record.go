@@ -30,6 +30,7 @@ func (db Database) readRecordBlock(blockNo Address) (*recordBlock, error) {
 	}
 
 	if recordBlock.Signature != recordBlockSignature {
+
 		return nil, fmt.Errorf("Block %d is not a RecordBlock", blockNo)
 	}
 
