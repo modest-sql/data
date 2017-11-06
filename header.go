@@ -86,3 +86,12 @@ func (db Database) readHeaderBlock(blockNo Address) (*tableHeaderBlock, error) {
 
 	return tableHeaderBlock, nil
 }
+
+func (db Database) findHeaderBlock(tableName string) (*tableHeaderBlock, error) {
+	tableEntry, err := db.findTableEntry(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	return db.readHeaderBlock(tableEntry.HeaderBlock)
+}
