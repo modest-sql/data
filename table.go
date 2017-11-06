@@ -18,6 +18,28 @@ type ResultSet struct {
 	Rows []Row
 }
 
+func (db Database) AllTables() (tables []*Table, err error) {
+	for entryBlockNo := db.FirstEntryBlock; entryBlockNo != nullBlockNo; {
+		tableEntryBlock, err := db.readTableEntryBlock(entryBlockNo)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, tableEntry := range tableEntryBlock.tableEntries() {
+			tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+			if err != nil {
+				return nil, err
+			}
+
+			tables = append(tables, tableHeaderBlock.Table(tableEntry.TableName()))
+		}
+
+		entryBlockNo = tableEntryBlock.NextEntryBlock
+	}
+
+	return tables, nil
+}
+
 func (db Database) FindTable(tableName string) (*Table, error) {
 	tableEntry, err := db.findTableEntry(tableName)
 	if err != nil {
