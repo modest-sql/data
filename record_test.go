@@ -80,4 +80,24 @@ func TestReadRecordBlock(t *testing.T) {
 	}
 
 	mockFile.Close()
+
+	db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recordBlock, err := db.readRecordBlock(mockDatabase.tableHeaderBlock.FirstRecordBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if recordBlock.NextRecordBlock != mockDatabase.NextRecordBlock {
+		t.Errorf("Expected next record block to be %d, got %d", mockDatabase.NextRecordBlock, recordBlock.NextRecordBlock)
+	}
+
+	for i := range recordBlock.Data {
+		if recordBlock.Data[i] != mockDatabase.Data[i] {
+			t.Fatal("Record block data does not equal expected record block data")
+		}
+	}
 }

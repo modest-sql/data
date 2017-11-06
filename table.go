@@ -1,5 +1,7 @@
 package data
 
+import "errors"
+
 type Table struct {
 	TableName    string
 	TableColumns []TableColumn
@@ -17,10 +19,14 @@ func (db Database) FindTable(tableName string) (*Table, error) {
 		return nil, err
 	}
 
-	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+	tableHeaderBlock, err := db.findHeaderBlock(tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	return tableHeaderBlock.Table(tableEntry.TableName()), nil
+}
+
+func (db Database) ReadTable(tableName string) (rows []map[string]interface{}, err error) {
+	return rows, errors.New("Not implemented")
 }
