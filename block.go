@@ -12,6 +12,5 @@ func (db Database) readBlock(blockNo uint32) (b block, err error) {
 	if _, err = db.file.ReadAt(b[:], blockOffset(blockNo)); err != nil {
 		return b, err
 	}
-
 	return b, nil
 }
