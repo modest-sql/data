@@ -2,6 +2,8 @@ package data
 
 import "errors"
 
+type Row map[string]interface{}
+
 type Table struct {
 	TableName    string
 	TableColumns []TableColumn
@@ -27,6 +29,6 @@ func (db Database) FindTable(tableName string) (*Table, error) {
 	return tableHeaderBlock.Table(tableEntry.TableName()), nil
 }
 
-func (db Database) ReadTable(tableName string) (rows []map[string]interface{}, err error) {
+func (db Database) ReadTable(tableName string) (rows []Row, err error) {
 	return rows, errors.New("Not implemented")
 }

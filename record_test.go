@@ -3,6 +3,7 @@ package data
 import (
 	"bytes"
 	"encoding/binary"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -63,10 +64,11 @@ func TestReadRecordBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mockFile, err := os.Create(filepath.Join(databasesPath, "mock.db"))
+	mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(mockFile.Name())
 
 	buffer := bytes.NewBuffer(nil)
 	if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {

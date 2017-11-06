@@ -50,6 +50,8 @@ func TestNewDatabase(t *testing.T) {
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
+
+	os.Remove(filepath.Join("databases", databaseName))
 }
 
 func TestLoadDatabase(t *testing.T) {
