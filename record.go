@@ -6,9 +6,31 @@ import (
 	"fmt"
 )
 
-const maxRecordDataLength = 4088
+const (
+	maxRecordDataLength = 4088
+	freeFlagSize        = 4
+	freeFlag            = 0x99887766
+)
 
 type recordData [maxRecordDataLength]byte
+
+func (rd recordData) split(recordSize int) (records []record) {
+	recordsPerBlock := maxRecordDataLength / recordSize
+
+	for i := 0; i < recordsPerBlock; i++ {
+		startOffset := recordSize * i
+		endOffset := startOffset + recordSize
+		records = append(records, rd[startOffset:endOffset])
+	}
+
+	return records
+}
+
+type record []byte
+
+func (r record) isFree() bool {
+	return binary.LittleEndian.Uint32(r[:4]) == freeFlag
+}
 
 type recordBlock struct {
 	Signature       blockSignature
@@ -30,6 +52,7 @@ func (db Database) readRecordBlock(blockNo Address) (*recordBlock, error) {
 	}
 
 	if recordBlock.Signature != recordBlockSignature {
+
 		return nil, fmt.Errorf("Block %d is not a RecordBlock", blockNo)
 	}
 
