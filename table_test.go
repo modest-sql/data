@@ -133,7 +133,8 @@ func TestReadTable(t *testing.T) {
 		},
 	}
 
-	mockRecords := [3]struct {
+	expectedMockRecordsCount := 3
+	mockRecords := [102]struct {
 		FreeFlag uint32
 		IDMovie  uint32
 		Title    [32]byte
@@ -141,6 +142,16 @@ func TestReadTable(t *testing.T) {
 		{0, 0, movieTitle("Lord of the Rings")},
 		{0, 1, movieTitle("Harry Potter")},
 		{0, 2, movieTitle("Avengers")},
+	}
+
+	for i := 3; i < 102; i++ {
+		mockRecords[i] = struct {
+			FreeFlag uint32
+			IDMovie  uint32
+			Title    [32]byte
+		}{
+			FreeFlag: freeFlag,
+		}
 	}
 
 	if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
@@ -176,15 +187,15 @@ func TestReadTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if rowCount, expectedRowCount := len(rows), len(mockRecords); rowCount != expectedRowCount {
-		t.Fatalf("Expected to read %d rows, got %d", expectedRowCount, rowCount)
+	if rowCount := len(rows); rowCount != expectedMockRecordsCount {
+		t.Fatalf("Expected to read %d rows, got %d", expectedMockRecordsCount, rowCount)
 	}
 
 	for i, row := range rows {
 		if val, ok := row["ID_MOVIE"]; !ok {
 			t.Fatalf("Row %d does not contain column %s", i, "ID_MOVIE")
-		} else if val != mockRecords[i].IDMovie {
-			t.Errorf("Expected ID_MOVIE %d, got %d", mockRecords[i].IDMovie, val)
+		} else if val != int32(mockRecords[i].IDMovie) {
+			t.Errorf("Expected ID_MOVIE %d, got %d", int32(mockRecords[i].IDMovie), val)
 		}
 
 		if val, ok := row["TITLE"]; !ok {

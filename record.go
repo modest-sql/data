@@ -6,9 +6,51 @@ import (
 	"fmt"
 )
 
-const maxRecordDataLength = 4088
+const (
+	maxRecordDataLength = 4088
+	freeFlagSize        = 4
+	freeFlag            = 0x99887766
+)
 
 type recordData [maxRecordDataLength]byte
+
+func (rd recordData) split(recordSize int) (records []record) {
+	recordsPerBlock := maxRecordDataLength / recordSize
+
+	for i := 0; i < recordsPerBlock; i++ {
+		startOffset := recordSize * i
+		endOffset := startOffset + recordSize
+		records = append(records, rd[startOffset:endOffset])
+	}
+
+	return records
+}
+
+type record []byte
+
+func (r record) isFree() bool {
+	return binary.LittleEndian.Uint32(r[:4]) == freeFlag
+}
+
+func (r record) readInteger(offset int) int32 {
+	return int32(binary.LittleEndian.Uint32(r[offset : offset+4]))
+}
+
+func (r record) readFloat(offset int) float32 {
+	return float32(r.readInteger(offset))
+}
+
+func (r record) readBoolean(offset int) bool {
+	return r[offset] != 0
+}
+
+func (r record) readDatetime(offset int) int32 {
+	return r.readInteger(offset)
+}
+
+func (r record) readChar(offset int, size int) string {
+	return string(bytes.TrimRight(r[offset:offset+size], "\x00"))
+}
 
 type recordBlock struct {
 	Signature       blockSignature

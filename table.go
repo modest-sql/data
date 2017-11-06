@@ -38,11 +38,45 @@ func (db Database) ReadTable(tableName string) (rows []Row, err error) {
 		return nil, err
 	}
 
+	recordSize, columnOffsets := tableHeaderBlock.columnOffsets()
+	tableColumns := tableHeaderBlock.TableColumns()
+
 	for recordBlockNo := tableHeaderBlock.FirstRecordBlock; recordBlockNo != nullBlockNo; {
 		recordBlock, err := db.readRecordBlock(tableHeaderBlock.FirstRecordBlock)
 		if err != nil {
 			return nil, err
 		}
+
+		for _, record := range recordBlock.Data.split(recordSize) {
+			if record.isFree() {
+				continue
+			}
+
+			row := map[string]interface{}{}
+
+			for _, tableColumn := range tableColumns {
+				var value interface{}
+				offset := columnOffsets[tableColumn.ColumnName()]
+
+				switch tableColumn.DataType {
+				case integer:
+					value = record.readInteger(offset)
+				case float:
+					value = record.readFloat(offset)
+				case datetime:
+					value = record.readDatetime(offset)
+				case boolean:
+					value = record.readBoolean(offset)
+				case char:
+					value = record.readChar(offset, int(tableColumn.Size))
+				}
+
+				row[tableColumn.ColumnName()] = value
+			}
+
+			rows = append(rows, row)
+		}
+
 		recordBlockNo = recordBlock.NextRecordBlock
 	}
 	return rows, nil

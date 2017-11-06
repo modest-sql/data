@@ -23,6 +23,13 @@ const (
 	datetime
 )
 
+var dataTypeSizes = map[dataType]int{
+	integer:  4,
+	float:    4,
+	boolean:  1,
+	datetime: 4,
+}
+
 type tableHeaderBlock struct {
 	Signature         blockSignature
 	NextHeaderBlock   Address
@@ -51,6 +58,23 @@ func (h tableHeaderBlock) Table(tableName string) *Table {
 		TableName:    tableName,
 		TableColumns: tableColumns,
 	}
+}
+
+func (h tableHeaderBlock) columnOffsets() (size int, offsets map[string]int) {
+	offsets = map[string]int{}
+	size = freeFlagSize
+
+	for _, column := range h.TableColumns() {
+		offsets[column.ColumnName()] = int(size)
+
+		if column.DataType == char {
+			size += int(column.Size)
+		} else {
+			size += dataTypeSizes[column.DataType]
+		}
+	}
+
+	return size, offsets
 }
 
 type tableColumn struct {
