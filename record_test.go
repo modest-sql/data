@@ -16,7 +16,7 @@ func TestReadRecordBlock(t *testing.T) {
 		return b
 	}
 
-	movieTitle := func(str string) (b [30]byte) {
+	movieTitle := func(str string) (b [32]byte) {
 		copy(b[:], str)
 		return b
 	}
@@ -42,7 +42,7 @@ func TestReadRecordBlock(t *testing.T) {
 			ColumnCount:      2,
 			TableColumnsArray: tableColumns{
 				tableColumn{ColumnNameArray: name("ID_MOVIE"), DataType: integer},
-				tableColumn{ColumnNameArray: name("TITLE"), DataType: char, Size: 30},
+				tableColumn{ColumnNameArray: name("TITLE"), DataType: char, Size: 32},
 			}},
 		recordBlock: recordBlock{
 			Signature: recordBlockSignature,
@@ -52,7 +52,7 @@ func TestReadRecordBlock(t *testing.T) {
 	mockRecords := [3]struct {
 		FreeFlag uint32
 		IDMovie  uint32
-		Title    [30]byte
+		Title    [32]byte
 	}{
 		{0, 0, movieTitle("Lord of the Rings")},
 		{0, 1, movieTitle("Harry Potter")},

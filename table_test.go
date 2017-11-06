@@ -1,42 +1,90 @@
 package data
 
 import (
+	"encoding/binary"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
 
-func TestDatabase_FindTable(t *testing.T) {
-	type fields struct {
-		file             *os.File
-		DatabaseMetadata DatabaseMetadata
+func TestFindTable(t *testing.T) {
+	databasesPath := filepath.Join(".", "databases")
+	expectedTable := &Table{
+		TableName: "MOVIES",
+		TableColumns: []TableColumn{
+			TableColumn{ColumnName: "ID_MOVIE", ColumnType: integer},
+			TableColumn{ColumnName: "TITLE", ColumnType: char, ColumnSize: 32},
+		},
 	}
-	type args struct {
-		tableName string
+
+	name := func(str string) (b [60]byte) {
+		copy(b[:], str)
+		return b
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *Table
-		wantErr bool
+
+	mockDatabase := struct {
+		DatabaseMetadata
+		tableEntryBlock
+		_ [blockSize * 7]byte
+		tableHeaderBlock
 	}{
-	// TODO: Add test cases.
+		DatabaseMetadata: DatabaseMetadata{
+			FirstEntryBlock: 1,
+			LastEntryBlock:  1},
+		tableEntryBlock: tableEntryBlock{
+			Signature:    tableEntryBlockSignature,
+			EntriesCount: 1,
+			TableEntriesArray: tableEntries{
+				tableEntry{HeaderBlock: 9, TableNameArray: name(expectedTable.TableName)}},
+		},
+		tableHeaderBlock: tableHeaderBlock{
+			Signature:   tableHeaderBlockSignature,
+			ColumnCount: 2,
+			TableColumnsArray: tableColumns{
+				tableColumn{
+					ColumnNameArray: name(expectedTable.TableColumns[0].ColumnName),
+					DataType:        expectedTable.TableColumns[0].ColumnType,
+				},
+				tableColumn{
+					ColumnNameArray: name(expectedTable.TableColumns[1].ColumnName),
+					DataType:        expectedTable.TableColumns[1].ColumnType,
+					Size:            expectedTable.TableColumns[1].ColumnSize,
+				},
+			}},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := &Database{
-				file:             tt.fields.file,
-				DatabaseMetadata: tt.fields.DatabaseMetadata,
-			}
-			got, err := db.FindTable(tt.args.tableName)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Database.FindTable() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Database.FindTable() = %v, want %v", got, tt.want)
-			}
-		})
+
+	if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+		t.Fatal(err)
+	}
+
+	mockFile.Close()
+
+	db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	table, err := db.FindTable(expectedTable.TableName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if table == nil {
+		t.Fatal("Table not found")
+	}
+
+	if !reflect.DeepEqual(table, expectedTable) {
+		t.Error("Retrieved table does not match expected table")
 	}
 }
