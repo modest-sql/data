@@ -91,5 +91,5 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 }
 
 func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
-	return nil, errors.New("Not implemented")
+	return nil, errors.New("createTableEntry not implemented")
 }
