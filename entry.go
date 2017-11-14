@@ -3,6 +3,7 @@ package data
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -87,4 +88,8 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 	}
 
 	return nil, nil
+}
+
+func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
+	return nil, errors.New("Not implemented")
 }

@@ -177,3 +177,69 @@ func TestFindTableEntry(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateTableEntry(t *testing.T) {
+	databasesPath := filepath.Join(".", "databases")
+	expectedHeaderBlock := Address(3)
+
+	name := func(str string) (b [60]byte) {
+		copy(b[:], str)
+		return b
+	}
+
+	mockDatabase := struct {
+		DatabaseMetadata
+		tableEntryBlocks [2]tableEntryBlock
+	}{
+		DatabaseMetadata: DatabaseMetadata{
+			FirstEntryBlock: 1,
+			LastEntryBlock:  2,
+		},
+		tableEntryBlocks: [2]tableEntryBlock{
+			tableEntryBlock{
+				Signature:      tableEntryBlockSignature,
+				NextEntryBlock: 2,
+				EntriesCount:   maxTableEntries,
+			},
+			tableEntryBlock{
+				Signature:    tableEntryBlockSignature,
+				EntriesCount: 3,
+				TableEntriesArray: [maxTableEntries]tableEntry{
+					tableEntry{TableNameArray: name("MOVIES")},
+					tableEntry{TableNameArray: name("THEATERS")},
+					tableEntry{TableNameArray: name("HALLS")},
+				},
+			},
+		},
+	}
+
+	if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(mockFile.Name())
+
+	if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+		t.Fatal(err)
+	}
+
+	mockFile.Close()
+
+	db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableEntry, err := db.createTableEntry("SEATS")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if tableEntry.HeaderBlock != expectedHeaderBlock {
+		t.Errorf("Expected header block address %d, got %d", expectedHeaderBlock, tableEntry.HeaderBlock)
+	}
+}
