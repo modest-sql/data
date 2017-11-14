@@ -43,6 +43,6 @@ func (db Database) allocBlock() (Address, error) {
 	return 0, errors.New("allocBlock not implemented")
 }
 
-func (db Database) freeBlock() error {
+func (db Database) freeBlock(blockNo Address) error {
 	return errors.New("freeBlock not implemented")
 }

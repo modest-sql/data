@@ -214,7 +214,158 @@ func TestAllocBlock(t *testing.T) {
 }
 
 func TestFreeBlock(t *testing.T) {
+	databasesPath := filepath.Join(".", databasesDirName)
 
+	if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("NoFreeBlocks", func(t *testing.T) {
+		blockAddr := Address(1)
+		expectedBlockCount := uint32(1)
+		expectedFirstFreeBlock, expectedLastFreeBlock := blockAddr, blockAddr
+
+		mockDatabase := struct {
+			DatabaseMetadata
+			dummyBlock
+		}{}
+
+		mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(mockFile.Name())
+
+		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile.Close()
+
+		db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := db.freeBlock(blockAddr); err != nil {
+			t.Fatal(err)
+		}
+
+		if db.FirstFreeBlock != expectedFirstFreeBlock {
+			t.Errorf("Expected first free block %d, got %d", expectedFirstFreeBlock, db.FirstFreeBlock)
+		}
+
+		if db.LastFreeBlock != expectedLastFreeBlock {
+			t.Errorf("Expected last free block %d, got %d", expectedLastFreeBlock, db.LastFreeBlock)
+		}
+
+		if db.BlockCount != expectedBlockCount {
+			t.Errorf("Expected block count %d, got %d", expectedBlockCount, db.BlockCount)
+		}
+	})
+
+	t.Run("OneFreeBlock", func(t *testing.T) {
+		blockAddr := Address(2)
+		expectedBlockCount := uint32(2)
+		expectedFirstFreeBlock, expectedLastFreeBlock := blockAddr, Address(1)
+
+		mockDatabase := struct {
+			DatabaseMetadata
+			dummyBlocks [2]dummyBlock
+		}{
+			DatabaseMetadata: DatabaseMetadata{
+				FirstFreeBlock: 1,
+				LastFreeBlock:  1,
+				BlockCount:     2,
+			},
+		}
+
+		mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(mockFile.Name())
+
+		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile.Close()
+
+		db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := db.freeBlock(blockAddr); err != nil {
+			t.Fatal(err)
+		}
+
+		if db.FirstFreeBlock != expectedFirstFreeBlock {
+			t.Errorf("Expected first free block %d, got %d", expectedFirstFreeBlock, db.FirstFreeBlock)
+		}
+
+		if db.LastFreeBlock != expectedLastFreeBlock {
+			t.Errorf("Expected last free block %d, got %d", expectedLastFreeBlock, db.LastFreeBlock)
+		}
+
+		if db.BlockCount != expectedBlockCount {
+			t.Errorf("Expected block count %d, got %d", expectedBlockCount, db.BlockCount)
+		}
+	})
+
+	t.Run("MoreThanOneFreeBlock", func(t *testing.T) {
+		blockAddr := Address(3)
+		expectedBlockCount := uint32(3)
+		expectedFirstFreeBlock, expectedLastFreeBlock := blockAddr, Address(2)
+
+		mockDatabase := struct {
+			DatabaseMetadata
+			dummyBlocks [3]dummyBlock
+		}{
+			DatabaseMetadata: DatabaseMetadata{
+				FirstFreeBlock: 1,
+				LastFreeBlock:  1,
+				BlockCount:     2,
+			},
+			dummyBlocks: [3]dummyBlock{
+				dummyBlock{NextBlock: 2},
+			},
+		}
+
+		mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(mockFile.Name())
+
+		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile.Close()
+
+		db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := db.freeBlock(blockAddr); err != nil {
+			t.Fatal(err)
+		}
+
+		if db.FirstFreeBlock != expectedFirstFreeBlock {
+			t.Errorf("Expected first free block %d, got %d", expectedFirstFreeBlock, db.FirstFreeBlock)
+		}
+
+		if db.LastFreeBlock != expectedLastFreeBlock {
+			t.Errorf("Expected last free block %d, got %d", expectedLastFreeBlock, db.LastFreeBlock)
+		}
+
+		if db.BlockCount != expectedBlockCount {
+			t.Errorf("Expected block count %d, got %d", expectedBlockCount, db.BlockCount)
+		}
+	})
 }
 
 func TestBlockSizes(t *testing.T) {
