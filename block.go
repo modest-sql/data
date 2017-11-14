@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/binary"
+	"errors"
 )
 
 type blockSignature uint32
@@ -9,12 +10,18 @@ type blockSignature uint32
 const (
 	blockSize                                = 4096
 	nullBlockNo               Address        = 0
+	dummyBlockPadding                        = blockSize - 4
 	tableEntryBlockSignature  blockSignature = 0xff77ff77
 	tableHeaderBlockSignature blockSignature = 0xee11ee11
 	recordBlockSignature      blockSignature = 0xaa88aa88
 )
 
 type block [blockSize]byte
+
+type dummyBlock struct {
+	NextBlock Address
+	Padding   [dummyBlockPadding]byte
+}
 
 func (b block) signature() blockSignature {
 	return blockSignature(binary.LittleEndian.Uint32(b[:4]))
@@ -30,4 +37,12 @@ func (db Database) readBlock(blockNo Address) (b block, err error) {
 func (db Database) writeBlock(blockNo Address, block block) (err error) {
 	_, err = db.file.WriteAt(block[:], blockNo.offset())
 	return err
+}
+
+func (db Database) allocBlock() (Address, error) {
+	return 0, errors.New("allocBlock not implemented")
+}
+
+func (db Database) freeBlock(blockNo Address) error {
+	return errors.New("freeBlock not implemented")
 }
