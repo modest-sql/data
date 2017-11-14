@@ -322,6 +322,7 @@ func TestFreeBlock(t *testing.T) {
 		blockAddr := Address(3)
 		expectedBlockCount := uint32(3)
 		expectedFirstFreeBlock, expectedLastFreeBlock := blockAddr, Address(2)
+		expectedNextBlock := Address(1)
 
 		mockDatabase := struct {
 			DatabaseMetadata
@@ -329,7 +330,7 @@ func TestFreeBlock(t *testing.T) {
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				FirstFreeBlock: 1,
-				LastFreeBlock:  1,
+				LastFreeBlock:  2,
 				BlockCount:     3,
 			},
 			dummyBlocks: [3]dummyBlock{
@@ -368,6 +369,16 @@ func TestFreeBlock(t *testing.T) {
 
 		if db.BlockCount != expectedBlockCount {
 			t.Errorf("Expected block count %d, got %d", expectedBlockCount, db.BlockCount)
+		}
+
+		block, err := db.readBlock(blockAddr)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		nextBlock := Address(binary.LittleEndian.Uint32(block[4:8]))
+		if nextBlock != expectedNextBlock {
+			t.Errorf("Expected block %d to have next block %d, got %d", blockAddr, expectedNextBlock, nextBlock)
 		}
 	})
 }
