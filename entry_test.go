@@ -180,7 +180,6 @@ func TestFindTableEntry(t *testing.T) {
 
 func TestCreateTableEntry(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
-	expectedHeaderBlock := Address(3)
 
 	name := func(str string) (b [60]byte) {
 		copy(b[:], str)
@@ -234,12 +233,7 @@ func TestCreateTableEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tableEntry, err := db.createTableEntry("SEATS")
-	if err != nil {
+	if _, err := db.createTableEntry("SEATS"); err != nil {
 		t.Fatal(err)
-	}
-
-	if tableEntry.HeaderBlock != expectedHeaderBlock {
-		t.Errorf("Expected header block address %d, got %d", expectedHeaderBlock, tableEntry.HeaderBlock)
 	}
 }
