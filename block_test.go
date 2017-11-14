@@ -228,7 +228,11 @@ func TestFreeBlock(t *testing.T) {
 		mockDatabase := struct {
 			DatabaseMetadata
 			dummyBlock
-		}{}
+		}{
+			DatabaseMetadata: DatabaseMetadata{
+				BlockCount: 1,
+			},
+		}
 
 		mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
 		if err != nil {
@@ -326,7 +330,7 @@ func TestFreeBlock(t *testing.T) {
 			DatabaseMetadata: DatabaseMetadata{
 				FirstFreeBlock: 1,
 				LastFreeBlock:  1,
-				BlockCount:     2,
+				BlockCount:     3,
 			},
 			dummyBlocks: [3]dummyBlock{
 				dummyBlock{NextBlock: 2},
