@@ -93,3 +93,7 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
 	return nil, errors.New("createTableEntry not implemented")
 }
+
+func (db *Database) deleteTableEntry(tableName string) error {
+	return errors.New("deleteTableEntry not implemented")
+}

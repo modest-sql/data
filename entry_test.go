@@ -180,6 +180,9 @@ func TestFindTableEntry(t *testing.T) {
 
 func TestCreateTableEntry(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
+	expectedEntriesCount := uint32(4)
+	expectedTableName := "SEATS"
+	expectedBlockHeaderAddr := Address(3)
 
 	name := func(str string) (b [60]byte) {
 		copy(b[:], str)
@@ -193,6 +196,7 @@ func TestCreateTableEntry(t *testing.T) {
 		DatabaseMetadata: DatabaseMetadata{
 			FirstEntryBlock: 1,
 			LastEntryBlock:  2,
+			BlockCount:      2,
 		},
 		tableEntryBlocks: [2]tableEntryBlock{
 			tableEntryBlock{
@@ -233,7 +237,106 @@ func TestCreateTableEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := db.createTableEntry("SEATS"); err != nil {
+	if _, err := db.createTableEntry(expectedTableName); err != nil {
 		t.Fatal(err)
+	}
+
+	entryBlock, err := db.readTableEntryBlock(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if entryBlock.EntriesCount != expectedEntriesCount {
+		t.Fatalf("Expected %d entries, got %d", expectedEntriesCount, entryBlock.EntriesCount)
+	}
+
+	entry := entryBlock.tableEntries()[3]
+	if entry.TableName() != expectedTableName {
+		t.Fatalf("Expected entry with name `%s', got `%s'", expectedTableName, entry.TableName())
+	}
+
+	if entry.HeaderBlock != expectedBlockHeaderAddr {
+		t.Fatalf("Expected block header %d, got %d", expectedBlockHeaderAddr, entry.HeaderBlock)
+	}
+}
+
+func TestDeleteTableEntry(t *testing.T) {
+	databasesPath := filepath.Join(".", "databases")
+	expectedEntriesCount := uint32(2)
+	expectedTableNames := []string{"THEATERS", "HALLS"}
+
+	name := func(str string) (b [60]byte) {
+		copy(b[:], str)
+		return b
+	}
+
+	mockDatabase := struct {
+		DatabaseMetadata
+		tableEntryBlocks [2]tableEntryBlock
+	}{
+		DatabaseMetadata: DatabaseMetadata{
+			FirstEntryBlock: 1,
+			LastEntryBlock:  2,
+			BlockCount:      2,
+		},
+		tableEntryBlocks: [2]tableEntryBlock{
+			tableEntryBlock{
+				Signature:      tableEntryBlockSignature,
+				NextEntryBlock: 2,
+				EntriesCount:   maxTableEntries,
+			},
+			tableEntryBlock{
+				Signature:    tableEntryBlockSignature,
+				EntriesCount: 3,
+				TableEntriesArray: [maxTableEntries]tableEntry{
+					tableEntry{TableNameArray: name("MOVIES")},
+					tableEntry{TableNameArray: name("THEATERS")},
+					tableEntry{TableNameArray: name("HALLS")},
+				},
+			},
+		},
+	}
+
+	if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	mockFile, err := ioutil.TempFile(databasesPath, "modestdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(mockFile.Name())
+
+	if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+		t.Fatal(err)
+	}
+
+	mockFile.Close()
+
+	db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.deleteTableEntry("MOVIES"); err != nil {
+		t.Fatal(err)
+	}
+
+	entryBlock, err := db.readTableEntryBlock(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if entryBlock.EntriesCount != expectedEntriesCount {
+		t.Fatalf("Expected %d entries, got %d", expectedEntriesCount, entryBlock.EntriesCount)
+	}
+
+	for i := 0; i < 2; i++ {
+		tableName := entryBlock.TableEntriesArray[i].TableName()
+		expectedTableName := expectedTableNames[i]
+
+		if tableName != expectedTableName {
+			t.Fatalf("Expected table name `%s', got `%s'", expectedTableName, tableName)
+		}
 	}
 }
