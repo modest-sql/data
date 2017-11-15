@@ -107,7 +107,7 @@ func TestAllocBlock(t *testing.T) {
 
 		mockDatabase := struct {
 			DatabaseMetadata
-			dummyBlock
+			rawBlock
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				FirstFreeBlock: 1,
@@ -161,15 +161,15 @@ func TestAllocBlock(t *testing.T) {
 
 		mockDatabase := struct {
 			DatabaseMetadata
-			dummyBlocks [2]dummyBlock
+			dummyBlocks [2]rawBlock
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				FirstFreeBlock: 1,
 				LastFreeBlock:  2,
 				BlockCount:     2,
 			},
-			dummyBlocks: [2]dummyBlock{
-				dummyBlock{NextBlock: 2},
+			dummyBlocks: [2]rawBlock{
+				rawBlock{NextBlock: 2},
 			},
 		}
 
@@ -227,7 +227,7 @@ func TestFreeBlock(t *testing.T) {
 
 		mockDatabase := struct {
 			DatabaseMetadata
-			dummyBlock
+			rawBlock
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				BlockCount: 1,
@@ -275,7 +275,7 @@ func TestFreeBlock(t *testing.T) {
 
 		mockDatabase := struct {
 			DatabaseMetadata
-			dummyBlocks [2]dummyBlock
+			dummyBlocks [2]rawBlock
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				FirstFreeBlock: 1,
@@ -326,15 +326,15 @@ func TestFreeBlock(t *testing.T) {
 
 		mockDatabase := struct {
 			DatabaseMetadata
-			dummyBlocks [3]dummyBlock
+			dummyBlocks [3]rawBlock
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				FirstFreeBlock: 1,
 				LastFreeBlock:  2,
 				BlockCount:     3,
 			},
-			dummyBlocks: [3]dummyBlock{
-				dummyBlock{NextBlock: 2},
+			dummyBlocks: [3]rawBlock{
+				rawBlock{NextBlock: 2},
 			},
 		}
 
@@ -417,6 +417,15 @@ func TestBlockSizes(t *testing.T) {
 
 		if size != blockSize {
 			t.Errorf("Expected record block size to be %d, got %d", blockSize, size)
+		}
+	})
+
+	t.Run("RawBlock", func(t *testing.T) {
+		b := rawBlock{}
+		size := binary.Size(b)
+
+		if size != blockSize {
+			t.Errorf("Expected raw block size to be %d, got %d", blockSize, size)
 		}
 	})
 }

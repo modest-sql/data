@@ -10,7 +10,7 @@ type blockSignature uint32
 const (
 	blockSize                                = 4096
 	nullBlockAddr             Address        = 0
-	dummyBlockPadding                        = blockSize - 4
+	dummyBlockPadding                        = blockSize - 4*2
 	tableEntryBlockSignature  blockSignature = 0xff77ff77
 	tableHeaderBlockSignature blockSignature = 0xee11ee11
 	recordBlockSignature      blockSignature = 0xaa88aa88
@@ -18,7 +18,8 @@ const (
 
 type block [blockSize]byte
 
-type dummyBlock struct {
+type rawBlock struct {
+	Signature blockSignature
 	NextBlock Address
 	Padding   [dummyBlockPadding]byte
 }
