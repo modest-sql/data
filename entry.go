@@ -53,8 +53,8 @@ func (t tableEntry) SetTableName(tableName string) {
 	copy(t.TableNameArray[:], tableName)
 }
 
-func (db Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error) {
-	block, err := db.readBlock(blockNo)
+func (db Database) readTableEntryBlock(blockAddr Address) (*tableEntryBlock, error) {
+	block, err := db.readBlock(blockAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -67,15 +67,15 @@ func (db Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error
 	}
 
 	if tableEntryBlock.Signature != tableEntryBlockSignature {
-		return nil, fmt.Errorf("Block %d is not a TableEntryBlock", blockNo)
+		return nil, fmt.Errorf("Block %d is not a TableEntryBlock", blockAddr)
 	}
 
 	return tableEntryBlock, nil
 }
 
 func (db Database) findTableEntry(tableName string) (*tableEntry, error) {
-	for blockNo := db.FirstEntryBlock; blockNo != nullBlockNo; {
-		tableEntryBlock, err := db.readTableEntryBlock(blockNo)
+	for blockAddr := db.FirstEntryBlock; blockAddr != nullBlockAddr; {
+		tableEntryBlock, err := db.readTableEntryBlock(blockAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +84,7 @@ func (db Database) findTableEntry(tableName string) (*tableEntry, error) {
 			return tableEntry, nil
 		}
 
-		blockNo = tableEntryBlock.NextEntryBlock
+		blockAddr = tableEntryBlock.NextEntryBlock
 	}
 
 	return nil, nil

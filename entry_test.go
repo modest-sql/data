@@ -12,8 +12,8 @@ import (
 func TestReadTableEntryBlock(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	var expectedNextEntryBlock Address = 4
-	var blockNo Address = 1
-	blockOffset := int(metadataBlockSize + blockSize*(blockNo-1))
+	var blockAddr Address = 1
+	blockOffset := int(metadataBlockSize + blockSize*(blockAddr-1))
 	var expectedEntriesCount uint32 = 10
 
 	mockData := make([]byte, metadataBlockSize+blockSize)
@@ -60,7 +60,7 @@ func TestReadTableEntryBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entryBlock, err := db.readTableEntryBlock(blockNo)
+	entryBlock, err := db.readTableEntryBlock(blockAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,25 +80,25 @@ func TestReadTableEntryBlock(t *testing.T) {
 
 func TestFindTableEntry(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
-	var blockNo Address = 4
+	var blockAddr Address = 4
 	blockCount := 4
 	firstEntryBlock := byte(1)
 	expectedTableNames := []string{"MOVIES", "THEATERS", "FUNCTIONS", "HALLS"}
 	expectedHeaderBlocks := []Address{7, 12, 14, 20}
 	mockData := make([]byte, metadataBlockSize+blockSize*blockCount)
 
-	blockOffset := func(blockNo Address) int {
-		return int(metadataBlockSize + blockSize*(blockNo-1))
+	blockOffset := func(blockAddr Address) int {
+		return int(metadataBlockSize + blockSize*(blockAddr-1))
 	}
 
 	mockData[0] = firstEntryBlock
 
-	writeMockBlock := func(blockNo Address) {
+	writeMockBlock := func(blockAddr Address) {
 		var nextEntryBlock Address
-		blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset(blockNo)])
+		blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset(blockAddr)])
 
-		if int(blockNo) < blockCount {
-			nextEntryBlock = blockNo + 1
+		if int(blockAddr) < blockCount {
+			nextEntryBlock = blockAddr + 1
 		}
 
 		if err := binary.Write(blockBuffer, binary.LittleEndian, tableEntryBlockSignature); err != nil {
@@ -118,13 +118,13 @@ func TestFindTableEntry(t *testing.T) {
 	writeMockBlock(2)
 	writeMockBlock(3)
 
-	blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset(blockNo)])
+	blockBuffer := bytes.NewBuffer(mockData[metadataBlockSize:blockOffset(blockAddr)])
 
 	if err := binary.Write(blockBuffer, binary.LittleEndian, tableEntryBlockSignature); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := binary.Write(blockBuffer, binary.LittleEndian, nullBlockNo); err != nil {
+	if err := binary.Write(blockBuffer, binary.LittleEndian, nullBlockAddr); err != nil {
 		t.Fatal(err)
 	}
 

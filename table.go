@@ -19,8 +19,8 @@ type ResultSet struct {
 }
 
 func (db Database) AllTables() (tables []*Table, err error) {
-	for entryBlockNo := db.FirstEntryBlock; entryBlockNo != nullBlockNo; {
-		tableEntryBlock, err := db.readTableEntryBlock(entryBlockNo)
+	for entryBlockAddr := db.FirstEntryBlock; entryBlockAddr != nullBlockAddr; {
+		tableEntryBlock, err := db.readTableEntryBlock(entryBlockAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +34,7 @@ func (db Database) AllTables() (tables []*Table, err error) {
 			tables = append(tables, tableHeaderBlock.Table(tableEntry.TableName()))
 		}
 
-		entryBlockNo = tableEntryBlock.NextEntryBlock
+		entryBlockAddr = tableEntryBlock.NextEntryBlock
 	}
 
 	return tables, nil
@@ -69,7 +69,7 @@ func (db Database) ReadTable(tableName string) (*ResultSet, error) {
 	tableColumns := tableHeaderBlock.TableColumns()
 
 	rows := []Row{}
-	for recordBlockNo := tableHeaderBlock.FirstRecordBlock; recordBlockNo != nullBlockNo; {
+	for recordBlockAddr := tableHeaderBlock.FirstRecordBlock; recordBlockAddr != nullBlockAddr; {
 		recordBlock, err := db.readRecordBlock(tableHeaderBlock.FirstRecordBlock)
 		if err != nil {
 			return nil, err
@@ -90,7 +90,7 @@ func (db Database) ReadTable(tableName string) (*ResultSet, error) {
 			rows = append(rows, row)
 		}
 
-		recordBlockNo = recordBlock.NextRecordBlock
+		recordBlockAddr = recordBlock.NextRecordBlock
 	}
 
 	keys := []string{}

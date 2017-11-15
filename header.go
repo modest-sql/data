@@ -118,8 +118,8 @@ func (c tableColumn) SetColumnName(columnName string) {
 	copy(c.ColumnNameArray[:], columnName)
 }
 
-func (db Database) readHeaderBlock(blockNo Address) (*tableHeaderBlock, error) {
-	block, err := db.readBlock(blockNo)
+func (db Database) readHeaderBlock(blockAddr Address) (*tableHeaderBlock, error) {
+	block, err := db.readBlock(blockAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (db Database) readHeaderBlock(blockNo Address) (*tableHeaderBlock, error) {
 	}
 
 	if tableHeaderBlock.Signature != tableHeaderBlockSignature {
-		return nil, fmt.Errorf("Block %d is not a TableHeaderBlock", blockNo)
+		return nil, fmt.Errorf("Block %d is not a TableHeaderBlock", blockAddr)
 	}
 
 	return tableHeaderBlock, nil

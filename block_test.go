@@ -11,9 +11,9 @@ import (
 func TestReadBlock(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	var blocks uint32 = 7
-	var blockNo Address = 4
+	var blockAddr Address = 4
 	mockData := make([]byte, metadataBlockSize+blockSize*blocks)
-	blockOffset := int(metadataBlockSize + blockSize*(blockNo-1))
+	blockOffset := int(metadataBlockSize + blockSize*(blockAddr-1))
 	expectedString := "Modest SQL Database"
 
 	copy(mockData[blockOffset:blockOffset+len(expectedString)], expectedString)
@@ -39,7 +39,7 @@ func TestReadBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dataBlock, err := db.readBlock(blockNo)
+	dataBlock, err := db.readBlock(blockAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
