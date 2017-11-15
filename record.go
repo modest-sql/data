@@ -58,3 +58,17 @@ func (db Database) readRecordBlock(blockAddr Address) (*recordBlock, error) {
 
 	return recordBlock, nil
 }
+
+func (db Database) writeRecordBlock(blockAddr Address, recordBlock *recordBlock) error {
+	buffer := bytes.NewBuffer(nil)
+
+	recordBlock.Signature = recordBlockSignature
+	if err := binary.Write(buffer, binary.LittleEndian, recordBlock); err != nil {
+		return err
+	}
+
+	block := block{}
+	copy(block[:], buffer.Bytes())
+
+	return db.writeBlock(blockAddr, block)
+}

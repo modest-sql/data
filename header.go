@@ -138,6 +138,20 @@ func (db Database) readHeaderBlock(blockAddr Address) (*tableHeaderBlock, error)
 	return tableHeaderBlock, nil
 }
 
+func (db Database) writeTableHeaderBlock(blockAddr Address, tableHeaderBlock *tableHeaderBlock) error {
+	buffer := bytes.NewBuffer(nil)
+
+	tableHeaderBlock.Signature = tableHeaderBlockSignature
+	if err := binary.Write(buffer, binary.LittleEndian, tableHeaderBlock); err != nil {
+		return err
+	}
+
+	block := block{}
+	copy(block[:], buffer.Bytes())
+
+	return db.writeBlock(blockAddr, block)
+}
+
 func (db Database) findHeaderBlock(tableName string) (*tableHeaderBlock, error) {
 	tableEntry, err := db.findTableEntry(tableName)
 	if err != nil {

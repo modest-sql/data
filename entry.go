@@ -73,6 +73,20 @@ func (db Database) readTableEntryBlock(blockAddr Address) (*tableEntryBlock, err
 	return tableEntryBlock, nil
 }
 
+func (db Database) writeTableEntryBlock(blockAddr Address, tableEntryBlock *tableEntryBlock) error {
+	buffer := bytes.NewBuffer(nil)
+
+	tableEntryBlock.Signature = tableEntryBlockSignature
+	if err := binary.Write(buffer, binary.LittleEndian, tableEntryBlock); err != nil {
+		return err
+	}
+
+	block := block{}
+	copy(block[:], buffer.Bytes())
+
+	return db.writeBlock(blockAddr, block)
+}
+
 func (db Database) findTableEntry(tableName string) (*tableEntry, error) {
 	for blockAddr := db.FirstEntryBlock; blockAddr != nullBlockAddr; {
 		tableEntryBlock, err := db.readTableEntryBlock(blockAddr)
