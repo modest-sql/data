@@ -3,6 +3,7 @@ package data
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
 
@@ -71,4 +72,16 @@ func (db Database) writeRecordBlock(blockAddr Address, recordBlock *recordBlock)
 	copy(block[:], buffer.Bytes())
 
 	return db.writeBlock(blockAddr, block)
+}
+
+func (db Database) updateRecords(tableName string, values map[string]interface{}) error {
+	return errors.New("updateRecords not implemented")
+}
+
+func (db Database) deleteRecords(tableName string) (int, error) {
+	return 0, errors.New("deleteRecords not implemented")
+}
+
+func (rb *recordBlock) insertRecord(values map[string]interface{}) error {
+	return errors.New("insertRecord not implemented")
 }
