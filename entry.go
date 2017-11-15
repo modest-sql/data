@@ -53,7 +53,7 @@ func (t tableEntry) SetTableName(tableName string) {
 	copy(t.TableNameArray[:], tableName)
 }
 
-func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error) {
+func (db Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error) {
 	block, err := db.readBlock(blockNo)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, erro
 	return tableEntryBlock, nil
 }
 
-func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
+func (db Database) findTableEntry(tableName string) (*tableEntry, error) {
 	for blockNo := db.FirstEntryBlock; blockNo != nullBlockNo; {
 		tableEntryBlock, err := db.readTableEntryBlock(blockNo)
 		if err != nil {
@@ -94,6 +94,6 @@ func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
 	return nil, errors.New("createTableEntry not implemented")
 }
 
-func (db *Database) deleteTableEntry(tableName string) error {
+func (db Database) deleteTableEntry(tableName string) error {
 	return errors.New("deleteTableEntry not implemented")
 }
