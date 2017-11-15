@@ -1,7 +1,6 @@
 package data
 
 import (
-	"encoding/binary"
 	"errors"
 )
 
@@ -9,8 +8,8 @@ type blockSignature uint32
 
 const (
 	blockSize                                = 4096
-	nullBlockAddr             Address        = 0
 	rawBlockPadding                          = blockSize - 4*2
+	nullBlockAddr             Address        = 0
 	tableEntryBlockSignature  blockSignature = 0xff77ff77
 	tableHeaderBlockSignature blockSignature = 0xee11ee11
 	recordBlockSignature      blockSignature = 0xaa88aa88
@@ -22,10 +21,6 @@ type rawBlock struct {
 	Signature blockSignature
 	NextBlock Address
 	Padding   [rawBlockPadding]byte
-}
-
-func (b block) signature() blockSignature {
-	return blockSignature(binary.LittleEndian.Uint32(b[:4]))
 }
 
 func (db Database) readBlock(blockAddr Address) (b block, err error) {
