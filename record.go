@@ -38,8 +38,8 @@ type recordBlock struct {
 	Data            recordData
 }
 
-func (db Database) readRecordBlock(blockNo Address) (*recordBlock, error) {
-	block, err := db.readBlock(blockNo)
+func (db Database) readRecordBlock(blockAddr Address) (*recordBlock, error) {
+	block, err := db.readBlock(blockAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +53,22 @@ func (db Database) readRecordBlock(blockNo Address) (*recordBlock, error) {
 
 	if recordBlock.Signature != recordBlockSignature {
 
-		return nil, fmt.Errorf("Block %d is not a RecordBlock", blockNo)
+		return nil, fmt.Errorf("Block %d is not a RecordBlock", blockAddr)
 	}
 
 	return recordBlock, nil
+}
+
+func (db Database) writeRecordBlock(blockAddr Address, recordBlock *recordBlock) error {
+	buffer := bytes.NewBuffer(nil)
+
+	recordBlock.Signature = recordBlockSignature
+	if err := binary.Write(buffer, binary.LittleEndian, recordBlock); err != nil {
+		return err
+	}
+
+	block := block{}
+	copy(block[:], buffer.Bytes())
+
+	return db.writeBlock(blockAddr, block)
 }

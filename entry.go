@@ -53,8 +53,8 @@ func (t tableEntry) SetTableName(tableName string) {
 	copy(t.TableNameArray[:], tableName)
 }
 
-func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error) {
-	block, err := db.readBlock(blockNo)
+func (db Database) readTableEntryBlock(blockAddr Address) (*tableEntryBlock, error) {
+	block, err := db.readBlock(blockAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -67,15 +67,29 @@ func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, erro
 	}
 
 	if tableEntryBlock.Signature != tableEntryBlockSignature {
-		return nil, fmt.Errorf("Block %d is not a TableEntryBlock", blockNo)
+		return nil, fmt.Errorf("Block %d is not a TableEntryBlock", blockAddr)
 	}
 
 	return tableEntryBlock, nil
 }
 
-func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
-	for blockNo := db.FirstEntryBlock; blockNo != nullBlockNo; {
-		tableEntryBlock, err := db.readTableEntryBlock(blockNo)
+func (db Database) writeTableEntryBlock(blockAddr Address, tableEntryBlock *tableEntryBlock) error {
+	buffer := bytes.NewBuffer(nil)
+
+	tableEntryBlock.Signature = tableEntryBlockSignature
+	if err := binary.Write(buffer, binary.LittleEndian, tableEntryBlock); err != nil {
+		return err
+	}
+
+	block := block{}
+	copy(block[:], buffer.Bytes())
+
+	return db.writeBlock(blockAddr, block)
+}
+
+func (db Database) findTableEntry(tableName string) (*tableEntry, error) {
+	for blockAddr := db.FirstEntryBlock; blockAddr != nullBlockAddr; {
+		tableEntryBlock, err := db.readTableEntryBlock(blockAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +98,7 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 			return tableEntry, nil
 		}
 
-		blockNo = tableEntryBlock.NextEntryBlock
+		blockAddr = tableEntryBlock.NextEntryBlock
 	}
 
 	return nil, nil
@@ -94,6 +108,6 @@ func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
 	return nil, errors.New("createTableEntry not implemented")
 }
 
-func (db *Database) deleteTableEntry(tableName string) error {
+func (db Database) deleteTableEntry(tableName string) error {
 	return errors.New("deleteTableEntry not implemented")
 }

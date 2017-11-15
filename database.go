@@ -78,7 +78,7 @@ func (db Database) Close() error {
 	return db.file.Close()
 }
 
-func (db *Database) writeMetadata() error {
+func (db Database) writeMetadata() error {
 	if _, err := db.file.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
@@ -94,10 +94,10 @@ func (db *Database) readMetadata() error {
 	return binary.Read(db.file, binary.LittleEndian, &db.DatabaseMetadata)
 }
 
-func (a Address) offset() int64 {
-	if a == 0 {
+func (addr Address) offset() int64 {
+	if addr == 0 {
 		panic("Block address must be greater than 0")
 	}
 
-	return int64(metadataBlockSize + blockSize*(a-1))
+	return int64(metadataBlockSize + blockSize*(addr-1))
 }
