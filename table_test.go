@@ -96,8 +96,8 @@ func TestFindTable(t *testing.T) {
 func TestNewTable(t *testing.T) {
 	dbName := "mock.db"
 	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
-		*common.NewIntegerTableColumn("ID_MOVIE", nil, false, true),
-		*common.NewCharTableColumn("TITLE", nil, false, false, 32),
+		common.NewIntegerTableColumn("ID_MOVIE", nil, false, true),
+		common.NewCharTableColumn("TITLE", nil, false, false, 32),
 	})
 
 	db, err := NewDatabase(dbName)
