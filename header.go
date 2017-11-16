@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	"github.com/modest-sql/common"
 )
 
 type dataType uint16
@@ -19,15 +21,42 @@ const (
 	integer dataType = iota
 	float
 	boolean
-	char
 	datetime
+	char
+	invalid
 )
+
+var dataTypeNames = map[dataType]string{
+	integer:  "INTEGER",
+	float:    "FLOAT",
+	boolean:  "BOOLEAN",
+	datetime: "DATETIME",
+	char:     "CHAR",
+	invalid:  "INVALID",
+}
 
 var dataTypeSizes = map[dataType]int{
 	integer:  4,
 	float:    4,
 	boolean:  1,
 	datetime: 4,
+}
+
+func dataTypeOf(column interface{}) dataType {
+	switch column.(type) {
+	case common.IntegerTableColumn:
+		return integer
+	case common.FloatTableColumn:
+		return float
+	case common.BooleanTableColumn:
+		return boolean
+	case common.DatetimeTableColumn:
+		return datetime
+	case common.CharTableColumn:
+		return char
+	}
+
+	return invalid
 }
 
 type tableHeaderBlock struct {
@@ -37,6 +66,10 @@ type tableHeaderBlock struct {
 	ColumnCount       uint32
 	TableColumnsArray tableColumns
 	Padding           [tableHeaderBlockPaddingSize]byte
+}
+
+func (h *tableHeaderBlock) AddTableColumn(column tableColumn) {
+	h.TableColumnsArray[h.ColumnCount] = column
 }
 
 func (h tableHeaderBlock) TableColumns() []tableColumn {

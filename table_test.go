@@ -95,9 +95,13 @@ func TestFindTable(t *testing.T) {
 
 func TestNewTable(t *testing.T) {
 	dbName := "mock.db"
+	expectedColumnCount := 2
+	expectedIDColumnName, expectedTitleColumnName := "ID_MOVIE", "TITLE"
+	expectedTitleSize := 32
+
 	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
-		common.NewIntegerTableColumn("ID_MOVIE", nil, false, true),
-		common.NewCharTableColumn("TITLE", nil, false, false, 32),
+		common.NewIntegerTableColumn(expectedIDColumnName, nil, false, true),
+		common.NewCharTableColumn(expectedTitleColumnName, nil, false, false, expectedTitleSize),
 	})
 
 	db, err := NewDatabase(dbName)
@@ -117,6 +121,32 @@ func TestNewTable(t *testing.T) {
 
 	if result == nil {
 		t.Fatalf("Expected to find table with name `%s', none found", createCmd.TableName())
+	}
+
+	if columnCount := len(result.TableColumns); columnCount != expectedColumnCount {
+		t.Fatalf("Expected table to have %d columns, got %d", expectedColumnCount, columnCount)
+	}
+
+	IDColumn, titleColumn := result.TableColumns[0], result.TableColumns[1]
+
+	if IDColumn.ColumnName != expectedIDColumnName {
+		t.Errorf("Expected column to have name `%s', got `%s'", expectedIDColumnName, IDColumn.ColumnName)
+	}
+
+	if IDColumn.ColumnType != integer {
+		t.Errorf("Expected column to be of type `%s', got `%s'", dataTypeNames[integer], dataTypeNames[IDColumn.ColumnType])
+	}
+
+	if titleColumn.ColumnName != expectedTitleColumnName {
+		t.Errorf("Expected column to have name `%s', got `%s'", expectedTitleColumnName, titleColumn.ColumnName)
+	}
+
+	if titleColumn.ColumnType != char {
+		t.Errorf("Expected column to be of type `%s', got `%s'", dataTypeNames[char], dataTypeNames[titleColumn.ColumnType])
+	}
+
+	if titleColumn.ColumnSize != uint16(expectedTitleSize) {
+		t.Errorf("Expected column to be of size %d, got %d", expectedTitleSize, titleColumn.ColumnSize)
 	}
 }
 
