@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/modest-sql/common"
 )
 
 func TestFindTable(t *testing.T) {
@@ -88,6 +90,33 @@ func TestFindTable(t *testing.T) {
 
 	if !reflect.DeepEqual(table, expectedTable) {
 		t.Error("Retrieved table does not match expected table")
+	}
+}
+
+func TestNewTable(t *testing.T) {
+	dbName := "mock.db"
+	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
+		*common.NewIntegerTableColumn("ID_MOVIE", nil, false, true),
+		*common.NewCharTableColumn("TITLE", nil, false, false, 32),
+	})
+
+	db, err := NewDatabase(dbName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(filepath.Join(databasesDirName, dbName))
+
+	if _, err := db.NewTable(createCmd.TableName(), createCmd.TableColumnDefiners()); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := db.FindTable(createCmd.TableName())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result == nil {
+		t.Fatalf("Expected to find table with name `%s', none found", createCmd.TableName())
 	}
 }
 
