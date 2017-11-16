@@ -10,14 +10,17 @@ import (
 const (
 	databasesDirName  = "databases"
 	metadataBlockSize = 128
-	metadataFields    = 4
+	metadataFields    = 5
 )
 
+type Address uint32
+
 type DatabaseMetadata struct {
-	FirstEntryBlock uint32
-	LastEntryBlock  uint32
-	FirstFreeBlock  uint32
-	LastFreeBlock   uint32
+	FirstEntryBlock Address
+	LastEntryBlock  Address
+	FirstFreeBlock  Address
+	LastFreeBlock   Address
+	BlockCount      uint32
 	Padding         [metadataBlockSize - 4*metadataFields]byte
 }
 
@@ -75,7 +78,7 @@ func (db Database) Close() error {
 	return db.file.Close()
 }
 
-func (db *Database) writeMetadata() error {
+func (db Database) writeMetadata() error {
 	if _, err := db.file.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
@@ -89,4 +92,12 @@ func (db *Database) readMetadata() error {
 	}
 
 	return binary.Read(db.file, binary.LittleEndian, &db.DatabaseMetadata)
+}
+
+func (addr Address) offset() int64 {
+	if addr == 0 {
+		panic("Block address must be greater than 0")
+	}
+
+	return int64(metadataBlockSize + blockSize*(addr-1))
 }
