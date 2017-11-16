@@ -446,6 +446,10 @@ func TestInsertRecord(t *testing.T) {
 		t.Fatal("Expected to insert record in block")
 	}
 
+	if err := db.writeRecordBlock(3, recordBlock); err != nil {
+		t.Fatal(err)
+	}
+
 	resultSet, err := db.ReadTable(tableName)
 	if err != nil {
 		t.Fatal(err)
