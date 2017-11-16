@@ -703,4 +703,81 @@ func TestInsert(t *testing.T) {
 			t.Errorf("Expected to read movie title `%s', got `%s'", expectedTitle, resultTitle)
 		}
 	})
+
+	t.Run("NoRecordBlocks", func(t *testing.T) {
+		expectedBlockCount := uint32(3)
+		expectedRecordsCount := 1
+
+		mockDatabase := struct {
+			DatabaseMetadata
+			tableEntryBlock
+			tableHeaderBlock
+		}{
+			DatabaseMetadata: DatabaseMetadata{
+				FirstEntryBlock: 1,
+				LastEntryBlock:  1},
+			tableEntryBlock: tableEntryBlock{
+				Signature:    tableEntryBlockSignature,
+				EntriesCount: 1,
+				TableEntriesArray: tableEntries{
+					tableEntry{HeaderBlock: 2, TableNameArray: name(tableName)}},
+			},
+			tableHeaderBlock: tableHeaderBlock{
+				Signature:   tableHeaderBlockSignature,
+				ColumnCount: 2,
+				TableColumnsArray: tableColumns{
+					tableColumn{ColumnNameArray: name("ID_MOVIE"), DataType: integer},
+					tableColumn{ColumnNameArray: name("TITLE"), DataType: char, Size: 32},
+				},
+			},
+		}
+
+		if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile, err := os.Create(filepath.Join("databases", "mock.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile.Close()
+
+		db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := db.Insert(tableName, values); err != nil {
+			t.Fatal(err)
+		}
+
+		if db.DatabaseMetadata.BlockCount != expectedBlockCount {
+			t.Fatalf("Expected database to have %d blocks, got %d", expectedBlockCount, db.DatabaseMetadata.BlockCount)
+		}
+
+		resultSet, err := db.ReadTable(tableName)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows := resultSet.Rows
+
+		if rowCount := len(rows); rowCount != expectedRecordsCount {
+			t.Fatalf("Expected to read %d rows, got %d", expectedRecordsCount, rowCount)
+		}
+
+		resultID, resultTitle := rows[0]["ID_MOVIE"], rows[0]["TITLE"]
+		if resultID != expectedID {
+			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
+		}
+
+		if resultTitle != expectedTitle {
+			t.Errorf("Expected to read movie title `%s', got `%s'", expectedTitle, resultTitle)
+		}
+	})
 }
