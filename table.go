@@ -106,7 +106,7 @@ func (db Database) ReadTable(tableName string) (*ResultSet, error) {
 
 	rows := []Row{}
 	for recordBlockAddr := tableHeaderBlock.FirstRecordBlock; recordBlockAddr != nullBlockAddr; {
-		recordBlock, err := db.readRecordBlock(tableHeaderBlock.FirstRecordBlock)
+		recordBlock, err := db.readRecordBlock(recordBlockAddr)
 		if err != nil {
 			return nil, err
 		}

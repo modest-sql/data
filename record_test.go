@@ -447,7 +447,7 @@ func TestInsertRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !recordBlock.insertRecord(tableHeaderBlock.TableColumns(), values) {
+	if !recordBlock.insertRecord(values.record(tableHeaderBlock.TableColumns())) {
 		t.Fatal("Expected to insert record in block")
 	}
 
@@ -543,6 +543,20 @@ func TestInsert(t *testing.T) {
 			{0, 2, movieTitle("Avengers")},
 		}
 
+		padding := [102]struct {
+			FreeFlag uint32
+			Padding  [36]byte
+		}{}
+
+		for i := 0; i < 102; i++ {
+			padding[i] = struct {
+				FreeFlag uint32
+				Padding  [36]byte
+			}{
+				FreeFlag: freeFlag,
+			}
+		}
+
 		for i := 3; i < 102; i++ {
 			mockRecords[i] = struct {
 				FreeFlag uint32
@@ -563,10 +577,15 @@ func TestInsert(t *testing.T) {
 		}
 
 		buffer := bytes.NewBuffer(nil)
+		if err := binary.Write(buffer, binary.LittleEndian, padding); err != nil {
+			t.Fatal(err)
+		}
+		copy(mockDatabase.recordBlocks[0].Data[:], buffer.Bytes())
+
+		buffer = bytes.NewBuffer(nil)
 		if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
 			t.Fatal(err)
 		}
-
 		copy(mockDatabase.recordBlocks[1].Data[:], buffer.Bytes())
 
 		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
@@ -596,7 +615,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[3]["ID_MOVIE"], rows[3]["TITLE"]
-		if resultID != expectedID {
+		if resultID.(int32) != int32(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 
@@ -717,7 +736,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[101]["ID_MOVIE"], rows[101]["TITLE"]
-		if resultID != expectedID {
+		if resultID.(int32) != int32(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 
@@ -835,7 +854,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[3]["ID_MOVIE"], rows[3]["TITLE"]
-		if resultID != expectedID {
+		if resultID.(int32) != int32(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 
@@ -922,7 +941,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[0]["ID_MOVIE"], rows[0]["TITLE"]
-		if resultID != expectedID {
+		if resultID.(int32) != int32(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 

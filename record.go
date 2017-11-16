@@ -117,13 +117,17 @@ func (v tableValues) record(columns []tableColumn) (record record) {
 	return record
 }
 
-func (rb *recordBlock) insertRecord(tableColumns []tableColumn, values tableValues) bool {
+func (rb *recordBlock) init(recordSize int) {
+
+}
+
+func (rb *recordBlock) insertRecord(newRecord record) bool {
 	if rb.FullFlag == fullFlag {
 		return false
 	}
 
-	newRecord := values.record(tableColumns)
 	recordSize := len(newRecord)
+	recordsPerBlock := maxRecordDataLength / recordSize
 
 	for i, record := range rb.Data.split(recordSize) {
 		if !record.isFree() {
@@ -134,12 +138,68 @@ func (rb *recordBlock) insertRecord(tableColumns []tableColumn, values tableValu
 		endOffset := startOffset + recordSize
 
 		copy(rb.Data[startOffset:endOffset], newRecord)
-		break
+
+		if i == recordsPerBlock-1 {
+			rb.FullFlag = fullFlag
+		}
+
+		return true
 	}
 
-	return true
+	return false
 }
 
 func (db *Database) Insert(tableName string, values tableValues) error {
-	return errors.New("Insert not implemented")
+	tableEntry, err := db.findTableEntry(tableName)
+	if err != nil {
+		return err
+	}
+
+	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+	if err != nil {
+		return err
+	}
+
+	record := values.record(tableHeaderBlock.TableColumns())
+
+	var lastRecordBlockAddr Address
+	var lastRecordBlock *recordBlock
+
+	for recordBlockAddr := tableHeaderBlock.FirstRecordBlock; recordBlockAddr != nullBlockAddr; {
+		recordBlock, err := db.readRecordBlock(recordBlockAddr)
+		if err != nil {
+			return err
+		}
+
+		if recordBlock.insertRecord(record) {
+			return db.writeRecordBlock(recordBlockAddr, recordBlock)
+		}
+
+		lastRecordBlock, lastRecordBlockAddr = recordBlock, recordBlockAddr
+		recordBlockAddr = recordBlock.NextRecordBlock
+	}
+
+	newRecordBlockAddr, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	if tableHeaderBlock.NextHeaderBlock == nullBlockAddr {
+		tableHeaderBlock.NextHeaderBlock = newRecordBlockAddr
+
+		if err := db.writeTableHeaderBlock(tableEntry.HeaderBlock, tableHeaderBlock); err != nil {
+			return err
+		}
+	} else {
+		lastRecordBlock.NextRecordBlock = newRecordBlockAddr
+
+		if err := db.writeRecordBlock(lastRecordBlockAddr, lastRecordBlock); err != nil {
+			return err
+		}
+	}
+
+	newRecordBlock := &recordBlock{}
+	newRecordBlock.init(len(record))
+
+	return db.writeRecordBlock(newRecordBlockAddr, newRecordBlock)
 }
