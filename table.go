@@ -1,201 +1,138 @@
 package data
 
 import (
-	"fmt"
-	"log"
-	"encoding/json"
-	"reflect"
+	"github.com/modest-sql/common"
 )
 
+type Row map[string]interface{}
+
 type Table struct {
-	TableName [50]byte `json:"Table_Name"`
-	Field
+	TableName    string
+	TableColumns []TableColumn
 }
 
-type Field struct {
-	Id	int32	`json:"Id"`
-	Name [50]byte `json:"Name"`
+type TableColumn struct {
+	ColumnName string
+	ColumnType dataType
+	ColumnSize uint16
 }
 
-func Create(tableName [50]byte) {
-
-	var jsonText string
-	
-	var idents []Table
-
-	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
-		log.Println(err)
-	}
-
-	table := Table {
-		TableName: tableName,
-		Field: Field{
-		},
-	}
-
-	idents = append(idents, table)
-
-	result, err := json.Marshal(idents)
-
-	if err != nil {
-		log.Println(err)
-	}
-
-	fmt.Println(string(result))
-
-	WriteFile(result)
+type ResultSet struct {
+	Keys []string
+	Rows []Row
 }
 
-func Insert(tableName [50]byte) {
-	
-	var jsonText = ReadFile()
-
-	var idents []Table
-
-	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
-		log.Println(err)
-	}
-
-	var newJsonObj []Table
-
-	for _, jsonObj := range idents{
-		if reflect.DeepEqual(tableName, jsonObj.TableName){
-			jsonObj.Id = getNextId(tableName)
-			copy(jsonObj.Name[:], "Roberto")
-		}
-		
-		newJsonObj = append(newJsonObj, jsonObj)
-	
-		result, err := json.Marshal(newJsonObj)
-	
+func (db Database) AllTables() (tables []*Table, err error) {
+	for entryBlockAddr := db.FirstEntryBlock; entryBlockAddr != nullBlockAddr; {
+		tableEntryBlock, err := db.readTableEntryBlock(entryBlockAddr)
 		if err != nil {
-			log.Println(err)
+			return nil, err
 		}
-	
-		fmt.Println(string(result))
-	
-		WriteFile(result)
+
+		for _, tableEntry := range tableEntryBlock.tableEntries() {
+			tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+			if err != nil {
+				return nil, err
+			}
+
+			tables = append(tables, tableHeaderBlock.Table(tableEntry.TableName()))
+		}
+
+		entryBlockAddr = tableEntryBlock.NextEntryBlock
 	}
-	return
+
+	return tables, nil
 }
 
-func Update(tableName [50]byte, id int32) {
-		
-	var jsonText = ReadFile()
-	var idents []Table
-	
-	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
-		log.Println(err)
+func (db *Database) NewTable(tableName string, columns common.TableColumnDefiners) (table *Table, err error) {
+	tableEntry, err := db.createTableEntry(tableName)
+	if err != nil {
+		return nil, err
 	}
-	
-	var newJsonObj []Table
 
-	for _, jsonObj := range idents{
-		if jsonObj.Id == int32(id){
-			copy(jsonObj.Name[:], "Andres")
+	tableHeaderBlock := &tableHeaderBlock{
+		ColumnCount: uint32(len(columns)),
+	}
+
+	for _, column := range columns {
+		tableColumn := tableColumn{
+			DataType: dataTypeOf(column),
 		}
-		newJsonObj = append(newJsonObj, jsonObj)
+
+		if tableColumn.DataType == char {
+			c := column.(common.CharTableColumn)
+			tableColumn.Size = uint16(c.Size())
+		}
+
+		copy(tableColumn.ColumnNameArray[:], column.ColumnName())
+
+		tableHeaderBlock.AddTableColumn(tableColumn)
 	}
 
-	result, _ := json.Marshal(newJsonObj)
-	fmt.Println(string(result))
-	WriteFile(result)
+	if err := db.writeTableHeaderBlock(tableEntry.HeaderBlock, tableHeaderBlock); err != nil {
+		return nil, err
+	}
+
+	return tableHeaderBlock.Table(tableName), nil
 }
 
-func getNextId(tableName [50]byte) int32 {
-	
-	var jsonText = ReadFile()
-	var idents []Table
-	
-	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
-		log.Println(err)
+func (db Database) FindTable(tableName string) (*Table, error) {
+	tableEntry, err := db.findTableEntry(tableName)
+	if err != nil {
+		return nil, err
 	}
-		
-	current_id := 0
-	last_id := 0
 
-	for _, jsonObj := range idents{
-		if int(jsonObj.Id) > current_id {
-			current_id = int(jsonObj.Id)
-			last_id = current_id
-		} 
+	tableHeaderBlock, err := db.findHeaderBlock(tableName)
+	if err != nil {
+		return nil, err
 	}
-	fmt.Printf("%d",last_id)
 
-	return int32(current_id + 1)
+	return tableHeaderBlock.Table(tableEntry.TableName()), nil
 }
 
-func ShowRegisters(tableName [50]byte) {
-	var jsonText = ReadFile()
-	
-	var idents []Table
-	
-	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
-		log.Println(err)
+func (db Database) ReadTable(tableName string) (*ResultSet, error) {
+	tableEntry, err := db.findTableEntry(tableName)
+	if err != nil {
+		return nil, err
 	}
 
-	fmt.Printf("Id |         Nombre         |\n");	
-	fmt.Printf("---|------------------------|\n");
+	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, jsonObj := range idents {
-		if	reflect.DeepEqual(tableName, jsonObj.TableName){
-			fmt.Printf("%d  |%s                 |\n", jsonObj.Id, string(jsonObj.Name[:50]));
+	recordSize, readers := tableHeaderBlock.recordReaders()
+	tableColumns := tableHeaderBlock.TableColumns()
+
+	rows := []Row{}
+	for recordBlockAddr := tableHeaderBlock.FirstRecordBlock; recordBlockAddr != nullBlockAddr; {
+		recordBlock, err := db.readRecordBlock(tableHeaderBlock.FirstRecordBlock)
+		if err != nil {
+			return nil, err
 		}
-	}
-	fmt.Println()
-}
- 
 
-func main() {
-	
-	for {
-		
-		fmt.Printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~Options~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
-		fmt.Printf("\n1.insert\tInsert Attributes\n")
-		fmt.Printf("\n2.update\t(Not Implemented correctly)\n")
-		fmt.Printf("\n3.delete\t(Not Implemented)\n")
-		fmt.Printf("\n4.show registers\tShow all registers in file\n")
-		fmt.Printf("\n5.create table\tcreates table\n")
+		for _, record := range recordBlock.Data.split(recordSize) {
+			if record.isFree() {
+				continue
+			}
 
-		var input int
-		fmt.Printf("\n>> ")
-		fmt.Scanln(&input)
-		fmt.Println()
+			row := Row{}
 
-		switch input {
-		case 1:
-			var tableName [50]byte
-			copy(tableName[:], "Empleado")
+			for _, tableColumn := range tableColumns {
+				columnName := tableColumn.ColumnName()
+				row[columnName] = readers[columnName](record)
+			}
 
-			Insert(tableName)
-			break
-		case 2:
-			var id int32
-			var tableName string
-			fmt.Printf("\nId: ")
-			fmt.Scanln(&id)
-			fmt.Printf("\nTable Name: ")
-			fmt.Scanln(&tableName)
-			fmt.Println()
-
-			//Update(tableName,id)
-			break
-		case 3:
-
-		case 4:
-			var tableName [50]byte
-			copy(tableName[:], "Empleado")
-
-			ShowRegisters(tableName);	
-			break
-		case 5:
-			var tableName [50]byte
-			copy(tableName[:], "Empleado")
-
-			Create(tableName)
-			break
-		default:
-			break
+			rows = append(rows, row)
 		}
+
+		recordBlockAddr = recordBlock.NextRecordBlock
 	}
+
+	keys := []string{}
+	for _, tableColumn := range tableColumns {
+		keys = append(keys, tableColumn.ColumnName())
+	}
+
+	return &ResultSet{Keys: keys, Rows: rows}, nil
 }
