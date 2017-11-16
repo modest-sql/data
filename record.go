@@ -7,10 +7,13 @@ import (
 	"fmt"
 )
 
+type tableValues map[string]interface{}
+
 const (
-	maxRecordDataLength = 4088
+	maxRecordDataLength = 4084
 	freeFlagSize        = 4
 	freeFlag            = 0x99887766
+	fullFlag            = 0x10ccff01
 )
 
 type recordData [maxRecordDataLength]byte
@@ -36,6 +39,7 @@ func (r record) isFree() bool {
 type recordBlock struct {
 	Signature       blockSignature
 	NextRecordBlock Address
+	FullFlag        uint32
 	Data            recordData
 }
 
@@ -82,6 +86,14 @@ func (db Database) deleteRecords(tableName string) (int, error) {
 	return 0, errors.New("deleteRecords not implemented")
 }
 
-func (rb *recordBlock) insertRecord(values map[string]interface{}) error {
-	return errors.New("insertRecord not implemented")
+func (rb *recordBlock) insertRecord(values tableValues) bool {
+	if rb.FullFlag == fullFlag {
+		return false
+	}
+
+	return false
+}
+
+func (db *Database) Insert(tableName string, values tableValues) error {
+	return errors.New("Insert not implemented")
 }
