@@ -446,6 +446,10 @@ func TestInsertRecord(t *testing.T) {
 		t.Fatal("Expected to insert record in block")
 	}
 
+	if err := db.writeRecordBlock(3, recordBlock); err != nil {
+		t.Fatal(err)
+	}
+
 	resultSet, err := db.ReadTable(tableName)
 	if err != nil {
 		t.Fatal(err)
@@ -488,7 +492,7 @@ func TestInsert(t *testing.T) {
 		return b
 	}
 
-	t.Run("AvailableSpace", func(t *testing.T) {
+	t.Run("MoreThanOneAvailableSpace", func(t *testing.T) {
 		mockDatabase := struct {
 			DatabaseMetadata
 			tableEntryBlock
@@ -596,8 +600,130 @@ func TestInsert(t *testing.T) {
 		}
 	})
 
+	t.Run("OneAvailableSpace", func(t *testing.T) {
+		expectedRecordsCount := 102
+
+		mockDatabase := struct {
+			DatabaseMetadata
+			tableEntryBlock
+			tableHeaderBlock
+			recordBlock
+		}{
+			DatabaseMetadata: DatabaseMetadata{
+				FirstEntryBlock: 1,
+				LastEntryBlock:  1},
+			tableEntryBlock: tableEntryBlock{
+				Signature:    tableEntryBlockSignature,
+				EntriesCount: 1,
+				TableEntriesArray: tableEntries{
+					tableEntry{HeaderBlock: 2, TableNameArray: name(tableName)}},
+			},
+			tableHeaderBlock: tableHeaderBlock{
+				Signature:        tableHeaderBlockSignature,
+				FirstRecordBlock: 3,
+				ColumnCount:      2,
+				TableColumnsArray: tableColumns{
+					tableColumn{ColumnNameArray: name("ID_MOVIE"), DataType: integer},
+					tableColumn{ColumnNameArray: name("TITLE"), DataType: char, Size: 32},
+				}},
+			recordBlock: recordBlock{
+				Signature: recordBlockSignature,
+			},
+		}
+
+		mockRecords := [102]struct {
+			FreeFlag uint32
+			IDMovie  uint32
+			Title    [32]byte
+		}{
+			{0, 0, movieTitle("Lord of the Rings")},
+			{0, 1, movieTitle("Harry Potter")},
+			{0, 2, movieTitle("Avengers")},
+		}
+
+		for i := 3; i < 101; i++ {
+			mockRecords[i] = struct {
+				FreeFlag uint32
+				IDMovie  uint32
+				Title    [32]byte
+			}{
+				IDMovie: uint32(i),
+				Title:   movieTitle("No title"),
+			}
+		}
+
+		mockRecords[101] = struct {
+			FreeFlag uint32
+			IDMovie  uint32
+			Title    [32]byte
+		}{
+			FreeFlag: freeFlag,
+		}
+
+		if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile, err := os.Create(filepath.Join("databases", "mock.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		buffer := bytes.NewBuffer(nil)
+		if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
+			t.Fatal(err)
+		}
+
+		copy(mockDatabase.recordBlock.Data[:], buffer.Bytes())
+
+		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile.Close()
+
+		db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := db.Insert(tableName, values); err != nil {
+			t.Fatal(err)
+		}
+
+		recordBlock, err := db.readRecordBlock(3)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if recordBlock.FullFlag != fullFlag {
+			t.Error("Expected record block to be marked as full")
+		}
+
+		resultSet, err := db.ReadTable(tableName)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows := resultSet.Rows
+
+		if rowCount := len(rows); rowCount != expectedRecordsCount {
+			t.Fatalf("Expected to read %d rows, got %d", expectedRecordsCount, rowCount)
+		}
+
+		resultID, resultTitle := rows[101]["ID_MOVIE"], rows[101]["TITLE"]
+		if resultID != expectedID {
+			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
+		}
+
+		if resultTitle != expectedTitle {
+			t.Errorf("Expected to read movie title `%s', got `%s'", expectedTitle, resultTitle)
+		}
+	})
+
 	t.Run("NoAvailableSpace", func(t *testing.T) {
 		expectedBlockCount := uint32(4)
+		expectedNextRecordBlock := Address(4)
 
 		mockDatabase := struct {
 			DatabaseMetadata
@@ -679,6 +805,15 @@ func TestInsert(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		recordBlock, err := db.readRecordBlock(3)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if recordBlock.NextRecordBlock != expectedNextRecordBlock {
+			t.Errorf("Expected record block to point to new record block %d, got %d", expectedNextRecordBlock, recordBlock.NextRecordBlock)
+		}
+
 		if db.DatabaseMetadata.BlockCount != expectedBlockCount {
 			t.Fatalf("Expected database to have %d blocks, got %d", expectedBlockCount, db.DatabaseMetadata.BlockCount)
 		}
@@ -695,6 +830,93 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[3]["ID_MOVIE"], rows[3]["TITLE"]
+		if resultID != expectedID {
+			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
+		}
+
+		if resultTitle != expectedTitle {
+			t.Errorf("Expected to read movie title `%s', got `%s'", expectedTitle, resultTitle)
+		}
+	})
+
+	t.Run("NoRecordBlocks", func(t *testing.T) {
+		expectedBlockCount := uint32(3)
+		expectedFirstRecordBlock := Address(3)
+		expectedRecordsCount := 1
+
+		mockDatabase := struct {
+			DatabaseMetadata
+			tableEntryBlock
+			tableHeaderBlock
+		}{
+			DatabaseMetadata: DatabaseMetadata{
+				FirstEntryBlock: 1,
+				LastEntryBlock:  1},
+			tableEntryBlock: tableEntryBlock{
+				Signature:    tableEntryBlockSignature,
+				EntriesCount: 1,
+				TableEntriesArray: tableEntries{
+					tableEntry{HeaderBlock: 2, TableNameArray: name(tableName)}},
+			},
+			tableHeaderBlock: tableHeaderBlock{
+				Signature:   tableHeaderBlockSignature,
+				ColumnCount: 2,
+				TableColumnsArray: tableColumns{
+					tableColumn{ColumnNameArray: name("ID_MOVIE"), DataType: integer},
+					tableColumn{ColumnNameArray: name("TITLE"), DataType: char, Size: 32},
+				},
+			},
+		}
+
+		if err := os.MkdirAll(databasesPath, os.ModePerm); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile, err := os.Create(filepath.Join("databases", "mock.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
+			t.Fatal(err)
+		}
+
+		mockFile.Close()
+
+		db, err := LoadDatabase(filepath.Base(mockFile.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := db.Insert(tableName, values); err != nil {
+			t.Fatal(err)
+		}
+
+		tableHeaderBlock, err := db.readHeaderBlock(2)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if tableHeaderBlock.FirstRecordBlock != expectedFirstRecordBlock {
+			t.Fatalf("Expected table header block to point to record block %d, got %d", expectedFirstRecordBlock, tableHeaderBlock.FirstRecordBlock)
+		}
+
+		if db.DatabaseMetadata.BlockCount != expectedBlockCount {
+			t.Fatalf("Expected database to have %d blocks, got %d", expectedBlockCount, db.DatabaseMetadata.BlockCount)
+		}
+
+		resultSet, err := db.ReadTable(tableName)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows := resultSet.Rows
+
+		if rowCount := len(rows); rowCount != expectedRecordsCount {
+			t.Fatalf("Expected to read %d rows, got %d", expectedRecordsCount, rowCount)
+		}
+
+		resultID, resultTitle := rows[0]["ID_MOVIE"], rows[0]["TITLE"]
 		if resultID != expectedID {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
