@@ -2,9 +2,12 @@ package data
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/modest-sql/common"
 )
 
 const (
@@ -100,4 +103,16 @@ func (addr Address) offset() int64 {
 	}
 
 	return int64(metadataBlockSize + blockSize*(addr-1))
+}
+
+func (db *Database) ExecuteCommand(cmd interface{}) error {
+	switch cmd := cmd.(type) {
+	case common.CreateTableCommand:
+		_, err := db.NewTable(cmd.TableName(), cmd.TableColumnDefiners())
+		return err
+	case common.InsertCommand:
+		return db.Insert(cmd.TableName(), cmd.Values())
+	}
+
+	return errors.New("Unrecognized command")
 }
