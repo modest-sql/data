@@ -841,6 +841,7 @@ func TestInsert(t *testing.T) {
 
 	t.Run("NoRecordBlocks", func(t *testing.T) {
 		expectedBlockCount := uint32(3)
+		expectedFirstRecordBlock := Address(3)
 		expectedRecordsCount := 1
 
 		mockDatabase := struct {
@@ -889,6 +890,15 @@ func TestInsert(t *testing.T) {
 
 		if err := db.Insert(tableName, values); err != nil {
 			t.Fatal(err)
+		}
+
+		tableHeaderBlock, err := db.readHeaderBlock(2)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if tableHeaderBlock.FirstRecordBlock != expectedFirstRecordBlock {
+			t.Fatalf("Expected table header block to point to record block %d, got %d", expectedFirstRecordBlock, tableHeaderBlock.FirstRecordBlock)
 		}
 
 		if db.DatabaseMetadata.BlockCount != expectedBlockCount {
