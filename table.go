@@ -1,11 +1,5 @@
 package data
 
-import (
-	"errors"
-
-	"github.com/modest-sql/common"
-)
-
 type Row map[string]interface{}
 
 type Table struct {
@@ -44,10 +38,6 @@ func (db Database) AllTables() (tables []*Table, err error) {
 	}
 
 	return tables, nil
-}
-
-func (db *Database) NewTable(tableName string, columns common.TableColumnDefiners) (*Table, error) {
-	return nil, errors.New("NewTable not implemented")
 }
 
 func (db Database) FindTable(tableName string) (*Table, error) {
