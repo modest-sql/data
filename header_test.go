@@ -8,14 +8,6 @@ import (
 	"testing"
 )
 
-var dataTypeNames = map[dataType]string{
-	integer:  "INTEGER",
-	float:    "FLOAT",
-	boolean:  "BOOLEAN",
-	char:     "CHAR",
-	datetime: "DATETIME",
-}
-
 func TestHeader(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	tableName := "MOVIES"

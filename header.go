@@ -26,6 +26,15 @@ const (
 	invalid
 )
 
+var dataTypeNames = map[dataType]string{
+	integer:  "INTEGER",
+	float:    "FLOAT",
+	boolean:  "BOOLEAN",
+	datetime: "DATETIME",
+	char:     "CHAR",
+	invalid:  "INVALID",
+}
+
 var dataTypeSizes = map[dataType]int{
 	integer:  4,
 	float:    4,
