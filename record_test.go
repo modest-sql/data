@@ -345,7 +345,7 @@ func TestInsertRecord(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	tableName := "MOVIES"
 	expectedRecordsCount := 4
-	expectedID, expectedTitle := 3, "Thor Ragnarok"
+	expectedID, expectedTitle := uint32(3), "Thor Ragnarok"
 
 	values := tableValues{
 		"ID_MOVIE": expectedID,
@@ -437,12 +437,17 @@ func TestInsertRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	tableHeaderBlock, err := db.readHeaderBlock(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	recordBlock, err := db.readRecordBlock(3)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !recordBlock.insertRecord(values) {
+	if !recordBlock.insertRecord(tableHeaderBlock.TableColumns(), values) {
 		t.Fatal("Expected to insert record in block")
 	}
 
@@ -462,7 +467,7 @@ func TestInsertRecord(t *testing.T) {
 	}
 
 	resultID, resultTitle := rows[3]["ID_MOVIE"], rows[3]["TITLE"]
-	if resultID != expectedID {
+	if resultID.(int32) != int32(expectedID) {
 		t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 	}
 
@@ -475,7 +480,7 @@ func TestInsert(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	tableName := "MOVIES"
 	expectedRecordsCount := 4
-	expectedID, expectedTitle := 3, "Thor Ragnarok"
+	expectedID, expectedTitle := uint32(3), "Thor Ragnarok"
 
 	values := tableValues{
 		"ID_MOVIE": expectedID,

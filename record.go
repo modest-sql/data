@@ -86,12 +86,58 @@ func (db Database) deleteRecords(tableName string) (int, error) {
 	return 0, errors.New("deleteRecords not implemented")
 }
 
-func (rb *recordBlock) insertRecord(values tableValues) bool {
+func (v tableValues) record(columns []tableColumn) (record record) {
+	record = append(record, make([]byte, 4)...)
+
+	for _, column := range columns {
+		value := v[column.ColumnName()]
+
+		switch column.DataType {
+		case integer:
+			buffer := make([]byte, 4)
+			binary.LittleEndian.PutUint32(buffer, uint32(value.(uint32)))
+			record = append(record, buffer...)
+		case float:
+			buffer := make([]byte, 4)
+			binary.LittleEndian.PutUint32(buffer, uint32(value.(float32)))
+			record = append(record, buffer...)
+		case boolean:
+			record = append(record, value.(byte))
+		case datetime:
+			buffer := make([]byte, 4)
+			binary.LittleEndian.PutUint32(buffer, value.(uint32))
+			record = append(record, buffer...)
+		case char:
+			str := make([]byte, column.Size)
+			copy(str, value.(string))
+			record = append(record, str...)
+		}
+	}
+
+	return record
+}
+
+func (rb *recordBlock) insertRecord(tableColumns []tableColumn, values tableValues) bool {
 	if rb.FullFlag == fullFlag {
 		return false
 	}
 
-	return false
+	newRecord := values.record(tableColumns)
+	recordSize := len(newRecord)
+
+	for i, record := range rb.Data.split(recordSize) {
+		if !record.isFree() {
+			continue
+		}
+
+		startOffset := i * recordSize
+		endOffset := startOffset + recordSize
+
+		copy(rb.Data[startOffset:endOffset], newRecord)
+		break
+	}
+
+	return true
 }
 
 func (db *Database) Insert(tableName string, values tableValues) error {
