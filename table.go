@@ -1,8 +1,6 @@
 package data
 
 import (
-	"errors"
-
 	"github.com/modest-sql/common"
 )
 
@@ -46,8 +44,36 @@ func (db Database) AllTables() (tables []*Table, err error) {
 	return tables, nil
 }
 
-func (db *Database) NewTable(tableName string, columns common.TableColumnDefiners) (*Table, error) {
-	return nil, errors.New("NewTable not implemented")
+func (db *Database) NewTable(tableName string, columns common.TableColumnDefiners) (table *Table, err error) {
+	tableEntry, err := db.createTableEntry(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	tableHeaderBlock := &tableHeaderBlock{
+		ColumnCount: uint32(len(columns)),
+	}
+
+	for _, column := range columns {
+		tableColumn := tableColumn{
+			DataType: dataTypeOf(column),
+		}
+
+		if tableColumn.DataType == char {
+			c := column.(common.CharTableColumn)
+			tableColumn.Size = uint16(c.Size())
+		}
+
+		copy(tableColumn.ColumnNameArray[:], column.ColumnName())
+
+		tableHeaderBlock.AddTableColumn(tableColumn)
+	}
+
+	if err := db.writeTableHeaderBlock(tableEntry.HeaderBlock, tableHeaderBlock); err != nil {
+		return nil, err
+	}
+
+	return tableHeaderBlock.Table(tableName), nil
 }
 
 func (db Database) FindTable(tableName string) (*Table, error) {
