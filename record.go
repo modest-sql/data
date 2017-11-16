@@ -36,6 +36,10 @@ func (r record) isFree() bool {
 	return binary.LittleEndian.Uint32(r[:4]) == freeFlag
 }
 
+func (r recordBlock) hasFreeSpace() bool {
+	return binary.LittleEndian.Uint32(r[:4]) == fullFlag
+}
+
 type recordBlock struct {
 	Signature       blockSignature
 	NextRecordBlock Address
@@ -88,12 +92,37 @@ func (db Database) deleteRecords(tableName string) (int, error) {
 
 func (rb *recordBlock) insertRecord(values tableValues) bool {
 	if rb.FullFlag == fullFlag {
-		return false
+
 	}
 
 	return false
 }
 
 func (db *Database) Insert(tableName string, values tableValues) error {
-	return errors.New("Insert not implemented")
+	tableEntry, err := db.findTableEntry(tableName)
+	if err != nil {
+		return err
+	}
+	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+	if err != nil {
+		return err
+	}
+
+	recordSize, _ := tableHeaderBlock.recordReaders()
+
+	for recordBlockAddr := tableHeaderBlock.FirstRecordBlock; recordBlockAddr != nullBlockAddr; {
+		recordBlock, err := db.readRecordBlock(recordBlockAddr)
+		if err != nil {
+			return err
+		}
+
+		for _, record := range recordBlock.Data.split(recordSize) {
+			if !record.isFree() {
+				continue
+			}
+			recordBlock.insertRecord(values)
+		}
+		recordBlockAddr = recordBlock.NextRecordBlock
+	}
+	return nil
 }

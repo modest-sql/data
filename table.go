@@ -1,11 +1,5 @@
 package data
 
-import (
-	"errors"
-
-	"github.com/modest-sql/common"
-)
-
 type Row map[string]interface{}
 
 type Table struct {
@@ -44,10 +38,6 @@ func (db Database) AllTables() (tables []*Table, err error) {
 	}
 
 	return tables, nil
-}
-
-func (db *Database) NewTable(tableName string, columns common.TableColumnDefiners) (*Table, error) {
-	return nil, errors.New("NewTable not implemented")
 }
 
 func (db Database) FindTable(tableName string) (*Table, error) {
@@ -109,53 +99,4 @@ func (db Database) ReadTable(tableName string) (*ResultSet, error) {
 	}
 
 	return &ResultSet{Keys: keys, Rows: rows}, nil
-}
-
-func (db Database) Insert(tableName string, values map[string]interface{}) error {
-	tableEntry, err := db.findTableEntry(tableName)
-	if err != nil {
-		return err
-	}
-	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
-	if err != nil {
-		return err
-	}
-
-	block, err := db.readBlock(tableEntry.HeaderBlock)
-	if err != nil {
-		return err
-	}
-
-	recordSize, _ := tableHeaderBlock.recordReaders()
-	tableColumns := tableHeaderBlock.TableColumns()
-	rows := []Row{}
-
-	for recordBlockAddr := tableHeaderBlock.FirstRecordBlock; recordBlockAddr != nullBlockAddr; {
-		recordBlock, err := db.readRecordBlock(tableHeaderBlock.FirstRecordBlock)
-		if err != nil {
-			return err
-		}
-
-		for _, record := range recordBlock.Data.split(recordSize) {
-			if record.isFree() {
-				continue
-			}
-
-			row := Row{}
-			for _, tableColumn := range tableColumns {
-				columnName := tableColumn.ColumnName()
-				if columnName == values[columnName].(string) {
-					row[columnName] = values[columnName].(string)
-				}
-			}
-			rows = append(rows, row)
-		}
-
-		err = db.writeBlock(recordBlockAddr, block)
-		if err != nil {
-			return err
-		}
-		recordBlockAddr = recordBlock.NextRecordBlock
-	}
-	return nil
 }
