@@ -45,7 +45,6 @@ func (e tableEntryBlock) findTableEntry(tableName string) *tableEntry {
 	return nil
 }
 
-
 func (t tableEntry) TableName() string {
 	return string(bytes.TrimRight(t.TableNameArray[:], "\x00"))
 }
@@ -73,13 +72,13 @@ func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, erro
 
 	return tableEntryBlock, nil
 }
-func (db *Database) writeTableEntryBlock (blockNo Address , EntryBlock *tableEntryBlock , isnew bool) (err error) {
-	    var newblock block
-		buffer := new(bytes.Buffer)
-	    err = binary.Write(buffer, binary.LittleEndian, EntryBlock);
-		copy(newblock[:], buffer.Bytes())
-		err = db.writeBlock(blockNo ,newblock )
-		if  err != nil {
+func (db *Database) writeTableEntryBlock(blockNo Address, EntryBlock *tableEntryBlock, isnew bool) (err error) {
+	var newblock block
+	buffer := new(bytes.Buffer)
+	err = binary.Write(buffer, binary.LittleEndian, EntryBlock)
+	copy(newblock[:], buffer.Bytes())
+	err = db.writeBlock(blockNo, newblock)
+	if err != nil {
 		return err
 	}
 
@@ -92,8 +91,8 @@ func (db *Database) writeTableEntryBlock (blockNo Address , EntryBlock *tableEnt
 	return nil
 }
 func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
-	for blockNo := db.FirstEntryBlock; blockNo != nullBlockNo; {
-		tableEntryBlock, err := db.readTableEntryBlock(blockNo)
+	for blockAddr := db.FirstEntryBlock; blockAddr != nullBlockAddr; {
+		tableEntryBlock, err := db.readTableEntryBlock(blockAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -102,56 +101,14 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 			return tableEntry, nil
 		}
 
-		blockNo = tableEntryBlock.NextEntryBlock
+		blockAddr = tableEntryBlock.NextEntryBlock
 	}
-    err :=  fmt.Errorf("The table %s does not exist ", tableName)
+	err := fmt.Errorf("The table %s does not exist ", tableName)
 	return nil, err
 }
 
-func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
-    _ , err := db.findTableEntry(tableName)
-
-	var tableEntryBlock *tableEntryBlock
-
-	if err != nil {
-
-		for blockNo := db.FirstEntryBlock; blockNo != nullBlockNo; {
-
-			tableEntryBlock, err = db.readTableEntryBlock(blockNo)
-
-			if err != nil {
-			   return nil, err
-		     }
-
-			if tableEntryBlock.EntriesCount  < maxTableEntries {
-
-			    newTableEntry  := tableEntry { HeaderBlock: db.DatabaseMetadata.LastEntryBlock+1 }
-				copy( newTableEntry.TableNameArray [:], tableName)
-				db.DatabaseMetadata.LastEntryBlock++
-
-				tableEntryBlock.TableEntriesArray[tableEntryBlock.EntriesCount] = newTableEntry
-				tableEntryBlock.EntriesCount++
-
-				err = db.writeTableEntryBlock(blockNo, tableEntryBlock , false)
-
-				if err != nil { return nil,err }
-
-				return &newTableEntry , nil
-
-			 } else {
-
-				//return nil, errors.New("It Needs more space ")
-
-			}
-
-
-			blockNo = tableEntryBlock.NextEntryBlock
-
-		}
-
-	}
-	return nil, err
-
+func (db *Database) createTableEntry(tableName string) error {
+	return errors.New("createTableEntry not implemented")
 }
 
 func (db *Database) deleteTableEntry(tableName string) error {
