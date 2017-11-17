@@ -12,6 +12,7 @@ const (
 	maxTableNameLength         = 60
 	maxTableEntries            = 63
 	tableEntryBlockPaddingSize = 52
+	nullEntrieIndex    uint32  = 0
 )
 
 type tableEntries [maxTableEntries]tableEntry
@@ -176,6 +177,51 @@ func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
 	return tableEntry, nil
 }
 
+func (db *Database) findBlockEntry(tableName string) ( *tableEntryBlock , Address ,  error) {
+	for blockNo := db.FirstEntryBlock; blockNo != nullBlockAddr; {
+		tableEntryBlock, err := db.readTableEntryBlock(blockNo)
+		if err != nil {
+			return nil , nullBlockAddr , err
+		}
+
+		if tableEntry := tableEntryBlock.findTableEntry(tableName); tableEntry != nil {
+			return tableEntryBlock, blockNo , nil
+		}
+
+		blockNo = tableEntryBlock.NextEntryBlock
+	}
+    err :=  fmt.Errorf("The table %s does not exist ", tableName)
+	return nil ,nullBlockAddr, err
+}
+
+func (e tableEntryBlock) findIndexTableEntry(tableName string) (uint32 , error) {
+	tableEntries := e.tableEntries()
+
+	for i := range tableEntries {
+		if tableEntries[i].TableName() == strings.ToUpper(tableName) {
+			return uint32(i),nil
+		}
+	}
+
+	return nullEntrieIndex, errors.New(" Error: Table not found")
+}
+
 func (db *Database) deleteTableEntry(tableName string) error {
-	return errors.New("deleteTableEntry not implemented")
+
+	entryBlock , blockNo , err := db.findBlockEntry(tableName)
+	if err != nil { return err }
+
+	index,err := entryBlock.findIndexTableEntry(tableName)
+	if err != nil   { return err }
+
+	if index > entryBlock.EntriesCount { return errors.New(" EntriesCount error: findIndexTableEntry is too high") }
+
+	realTableSlice := entryBlock.TableEntriesArray[:entryBlock.EntriesCount]
+	totalTableSlice := append(  realTableSlice[:index] , realTableSlice[index+1:]... )
+    copy(entryBlock.TableEntriesArray[:], totalTableSlice[:])
+	entryBlock.EntriesCount--
+
+	db.writeTableEntryBlock(blockNo, entryBlock )
+
+	return nil
 }
