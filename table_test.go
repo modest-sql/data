@@ -79,7 +79,7 @@ func TestFindTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	table, err := db.FindTable(expectedTable.TableName)
+	table, err := db.FindTable("MoViES")
 	if err != nil {
 		t.Fatal(err)
 	}

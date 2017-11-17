@@ -111,11 +111,13 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 
 		blockAddr = tableEntryBlock.NextEntryBlock
 	}
-	err := fmt.Errorf("The table %s does not exist ", tableName)
-	return nil, err
+
+	return nil, nil
 }
 
 func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
+	tableName = strings.ToUpper(tableName)
+
 	tableHeaderBlockAddr, err := db.allocBlock()
 	if err != nil {
 		return nil, err
