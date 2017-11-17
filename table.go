@@ -1,6 +1,9 @@
 package data
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/modest-sql/common"
 )
 
@@ -89,9 +92,15 @@ func (db Database) FindTable(tableName string) (*Table, error) {
 }
 
 func (db Database) ReadTable(tableName string) (*ResultSet, error) {
+	tableName = strings.ToUpper(tableName)
+
 	tableEntry, err := db.findTableEntry(tableName)
 	if err != nil {
 		return nil, err
+	}
+
+	if tableEntry == nil {
+		return nil, fmt.Errorf("Table `%s' does not exist in database", tableName)
 	}
 
 	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)

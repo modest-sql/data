@@ -48,7 +48,7 @@ func (e tableEntryBlock) findTableEntry(tableName string) *tableEntry {
 	tableEntries := e.tableEntries()
 
 	for i := range tableEntries {
-		if tableEntries[i].TableName() == strings.ToUpper(tableName) {
+		if strings.ToUpper(tableEntries[i].TableName()) == strings.ToUpper(tableName) {
 			return &tableEntries[i]
 		}
 	}
