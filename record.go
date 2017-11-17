@@ -36,6 +36,10 @@ func (r record) isFree() bool {
 	return binary.LittleEndian.Uint32(r[:4]) == freeFlag
 }
 
+func (r *record) setFree() {
+	binary.LittleEndian.PutUint32((*r)[:4], freeFlag)
+}
+
 type recordBlock struct {
 	Signature       blockSignature
 	NextRecordBlock Address
@@ -118,7 +122,16 @@ func (v tableValues) record(columns []tableColumn) (record record) {
 }
 
 func (rb *recordBlock) init(recordSize int) {
+	records := rb.Data.split(recordSize)
 
+	for i, record := range records {
+		record.setFree()
+
+		startOffset := i * recordSize
+		endOffset := startOffset + recordSize
+
+		copy(rb.Data[startOffset:endOffset], record)
+	}
 }
 
 func (rb *recordBlock) insertRecord(newRecord record) bool {
@@ -184,8 +197,8 @@ func (db *Database) Insert(tableName string, values tableValues) error {
 		return err
 	}
 
-	if tableHeaderBlock.NextHeaderBlock == nullBlockAddr {
-		tableHeaderBlock.NextHeaderBlock = newRecordBlockAddr
+	if tableHeaderBlock.FirstRecordBlock == nullBlockAddr {
+		tableHeaderBlock.FirstRecordBlock = newRecordBlockAddr
 
 		if err := db.writeTableHeaderBlock(tableEntry.HeaderBlock, tableHeaderBlock); err != nil {
 			return err
@@ -200,6 +213,7 @@ func (db *Database) Insert(tableName string, values tableValues) error {
 
 	newRecordBlock := &recordBlock{}
 	newRecordBlock.init(len(record))
+	newRecordBlock.insertRecord(record)
 
 	return db.writeRecordBlock(newRecordBlockAddr, newRecordBlock)
 }

@@ -757,7 +757,9 @@ func TestInsert(t *testing.T) {
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				FirstEntryBlock: 1,
-				LastEntryBlock:  1},
+				LastEntryBlock:  1,
+				BlockCount:      3,
+			},
 			tableEntryBlock: tableEntryBlock{
 				Signature:    tableEntryBlockSignature,
 				EntriesCount: 1,
@@ -875,7 +877,9 @@ func TestInsert(t *testing.T) {
 		}{
 			DatabaseMetadata: DatabaseMetadata{
 				FirstEntryBlock: 1,
-				LastEntryBlock:  1},
+				LastEntryBlock:  1,
+				BlockCount:      2,
+			},
 			tableEntryBlock: tableEntryBlock{
 				Signature:    tableEntryBlockSignature,
 				EntriesCount: 1,
