@@ -50,9 +50,7 @@ func (db *Database) NewTable(tableName string, columns common.TableColumnDefiner
 		return nil, err
 	}
 
-	tableHeaderBlock := &tableHeaderBlock{
-		ColumnCount: uint32(len(columns)),
-	}
+	tableHeaderBlock := &tableHeaderBlock{}
 
 	for _, column := range columns {
 		tableColumn := tableColumn{

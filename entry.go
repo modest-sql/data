@@ -33,6 +33,17 @@ func (e tableEntryBlock) tableEntries() []tableEntry {
 	return e.TableEntriesArray[:e.EntriesCount]
 }
 
+func (e *tableEntryBlock) addTableEntry(tableEntry tableEntry) bool {
+	if e.EntriesCount >= maxTableEntries {
+		return false
+	}
+
+	e.TableEntriesArray[e.EntriesCount] = tableEntry
+	e.EntriesCount++
+
+	return true
+}
+
 func (e tableEntryBlock) findTableEntry(tableName string) *tableEntry {
 	tableEntries := e.tableEntries()
 
@@ -72,24 +83,21 @@ func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, erro
 
 	return tableEntryBlock, nil
 }
-func (db *Database) writeTableEntryBlock(blockNo Address, EntryBlock *tableEntryBlock, isnew bool) (err error) {
-	var newblock block
-	buffer := new(bytes.Buffer)
-	err = binary.Write(buffer, binary.LittleEndian, EntryBlock)
-	copy(newblock[:], buffer.Bytes())
-	err = db.writeBlock(blockNo, newblock)
-	if err != nil {
+
+func (db Database) writeTableEntryBlock(blockAddr Address, tableEntryBlock *tableEntryBlock) error {
+	buffer := bytes.NewBuffer(nil)
+
+	tableEntryBlock.Signature = tableEntryBlockSignature
+	if err := binary.Write(buffer, binary.LittleEndian, tableEntryBlock); err != nil {
 		return err
 	}
 
-	//TODO increas last free block and entry
-	/*
-		db.DatabaseMetadata.LastEntryBlock++
-		db.DatabaseMetadata.BlockCount++
-		writeMetadata()
-	*/
-	return nil
+	block := block{}
+	copy(block[:], buffer.Bytes())
+
+	return db.writeBlock(blockAddr, block)
 }
+
 func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 	for blockAddr := db.FirstEntryBlock; blockAddr != nullBlockAddr; {
 		tableEntryBlock, err := db.readTableEntryBlock(blockAddr)
@@ -108,7 +116,62 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 }
 
 func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
-	return nil, errors.New("createTableEntry not implemented")
+	tableHeaderBlockAddr, err := db.allocBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	tableEntry := &tableEntry{HeaderBlock: tableHeaderBlockAddr}
+	copy(tableEntry.TableNameArray[:], tableName)
+
+	var lastTableEntryBlockAddr Address
+	var lastTableEntryBlock *tableEntryBlock
+
+	for tableEntryBlockAddr := db.FirstEntryBlock; tableEntryBlockAddr != nullBlockAddr; {
+		tableEntryBlock, err := db.readTableEntryBlock(tableEntryBlockAddr)
+		if err != nil {
+			return nil, err
+		}
+
+		if tableEntryBlock.addTableEntry(*tableEntry) {
+			if err := db.writeTableEntryBlock(tableEntryBlockAddr, tableEntryBlock); err != nil {
+				return nil, err
+			}
+
+			return tableEntry, nil
+		}
+
+		lastTableEntryBlockAddr, lastTableEntryBlock = tableEntryBlockAddr, tableEntryBlock
+		tableEntryBlockAddr = tableEntryBlock.NextEntryBlock
+	}
+
+	newTableEntryBlockAddr, err := db.allocBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	newTableEntryBlock := &tableEntryBlock{}
+	newTableEntryBlock.addTableEntry(*tableEntry)
+
+	if db.FirstEntryBlock == nullBlockAddr {
+		db.FirstEntryBlock = newTableEntryBlockAddr
+
+		if err := db.writeMetadata(); err != nil {
+			return nil, err
+		}
+	} else {
+		lastTableEntryBlock.NextEntryBlock = newTableEntryBlockAddr
+
+		if err := db.writeTableEntryBlock(lastTableEntryBlockAddr, lastTableEntryBlock); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := db.writeTableEntryBlock(newTableEntryBlockAddr, newTableEntryBlock); err != nil {
+		return nil, err
+	}
+
+	return tableEntry, nil
 }
 
 func (db *Database) deleteTableEntry(tableName string) error {

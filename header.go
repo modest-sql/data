@@ -70,6 +70,7 @@ type tableHeaderBlock struct {
 
 func (h *tableHeaderBlock) AddTableColumn(column tableColumn) {
 	h.TableColumnsArray[h.ColumnCount] = column
+	h.ColumnCount++
 }
 
 func (h tableHeaderBlock) TableColumns() []tableColumn {
