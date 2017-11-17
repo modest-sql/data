@@ -111,11 +111,11 @@ Returns an error if there was one.
 */
 func (db *Database) ExecuteCommand(cmd interface{}) (interface{}, error) {
 	switch cmd := cmd.(type) {
-	case common.CreateTableCommand:
+	case *common.CreateTableCommand:
 		return db.NewTable(cmd.TableName(), cmd.TableColumnDefiners())
-	case common.InsertCommand:
+	case *common.InsertCommand:
 		return nil, db.Insert(cmd.TableName(), cmd.Values())
-	case common.SelectTableCommand:
+	case *common.SelectTableCommand:
 		return db.ReadTable(cmd.SourceTable())
 	}
 
