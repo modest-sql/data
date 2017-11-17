@@ -36,6 +36,10 @@ func (r record) isFree() bool {
 	return binary.LittleEndian.Uint32(r[:4]) == freeFlag
 }
 
+func (r *record) setFree() {
+	binary.LittleEndian.PutUint32((*r)[:4], freeFlag)
+}
+
 type recordBlock struct {
 	Signature       blockSignature
 	NextRecordBlock Address
@@ -86,14 +90,130 @@ func (db Database) deleteRecords(tableName string) (int, error) {
 	return 0, errors.New("deleteRecords not implemented")
 }
 
-func (rb *recordBlock) insertRecord(values tableValues) bool {
+func (v tableValues) record(columns []tableColumn) (record record) {
+	record = append(record, make([]byte, 4)...)
+
+	for _, column := range columns {
+		value := v[column.ColumnName()]
+
+		switch column.DataType {
+		case integer:
+			buffer := make([]byte, 4)
+			binary.LittleEndian.PutUint32(buffer, uint32(value.(uint32)))
+			record = append(record, buffer...)
+		case float:
+			buffer := make([]byte, 4)
+			binary.LittleEndian.PutUint32(buffer, uint32(value.(float32)))
+			record = append(record, buffer...)
+		case boolean:
+			record = append(record, value.(byte))
+		case datetime:
+			buffer := make([]byte, 4)
+			binary.LittleEndian.PutUint32(buffer, value.(uint32))
+			record = append(record, buffer...)
+		case char:
+			str := make([]byte, column.Size)
+			copy(str, value.(string))
+			record = append(record, str...)
+		}
+	}
+
+	return record
+}
+
+func (rb *recordBlock) init(recordSize int) {
+	records := rb.Data.split(recordSize)
+
+	for i, record := range records {
+		record.setFree()
+
+		startOffset := i * recordSize
+		endOffset := startOffset + recordSize
+
+		copy(rb.Data[startOffset:endOffset], record)
+	}
+}
+
+func (rb *recordBlock) insertRecord(newRecord record) bool {
 	if rb.FullFlag == fullFlag {
 		return false
+	}
+
+	recordSize := len(newRecord)
+	recordsPerBlock := maxRecordDataLength / recordSize
+
+	for i, record := range rb.Data.split(recordSize) {
+		if !record.isFree() {
+			continue
+		}
+
+		startOffset := i * recordSize
+		endOffset := startOffset + recordSize
+
+		copy(rb.Data[startOffset:endOffset], newRecord)
+
+		if i == recordsPerBlock-1 {
+			rb.FullFlag = fullFlag
+		}
+
+		return true
 	}
 
 	return false
 }
 
 func (db *Database) Insert(tableName string, values tableValues) error {
-	return errors.New("Insert not implemented")
+	tableEntry, err := db.findTableEntry(tableName)
+	if err != nil {
+		return err
+	}
+
+	tableHeaderBlock, err := db.readHeaderBlock(tableEntry.HeaderBlock)
+	if err != nil {
+		return err
+	}
+
+	record := values.record(tableHeaderBlock.TableColumns())
+
+	var lastRecordBlockAddr Address
+	var lastRecordBlock *recordBlock
+
+	for recordBlockAddr := tableHeaderBlock.FirstRecordBlock; recordBlockAddr != nullBlockAddr; {
+		recordBlock, err := db.readRecordBlock(recordBlockAddr)
+		if err != nil {
+			return err
+		}
+
+		if recordBlock.insertRecord(record) {
+			return db.writeRecordBlock(recordBlockAddr, recordBlock)
+		}
+
+		lastRecordBlock, lastRecordBlockAddr = recordBlock, recordBlockAddr
+		recordBlockAddr = recordBlock.NextRecordBlock
+	}
+
+	newRecordBlockAddr, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	if tableHeaderBlock.FirstRecordBlock == nullBlockAddr {
+		tableHeaderBlock.FirstRecordBlock = newRecordBlockAddr
+
+		if err := db.writeTableHeaderBlock(tableEntry.HeaderBlock, tableHeaderBlock); err != nil {
+			return err
+		}
+	} else {
+		lastRecordBlock.NextRecordBlock = newRecordBlockAddr
+
+		if err := db.writeRecordBlock(lastRecordBlockAddr, lastRecordBlock); err != nil {
+			return err
+		}
+	}
+
+	newRecordBlock := &recordBlock{}
+	newRecordBlock.init(len(record))
+	newRecordBlock.insertRecord(record)
+
+	return db.writeRecordBlock(newRecordBlockAddr, newRecordBlock)
 }

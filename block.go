@@ -1,7 +1,10 @@
 package data
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
+	"io"
 )
 
 type blockSignature uint32
@@ -35,8 +38,54 @@ func (db Database) writeBlock(blockAddr Address, block block) (err error) {
 	return err
 }
 
-func (db *Database) allocBlock() (Address, error) {
-	return 0, errors.New("allocBlock not implemented")
+func (db Database) readRawBlock(blockAddr Address) (*rawBlock, error) {
+	block, err := db.readBlock(blockAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	buffer := bytes.NewBuffer(block[:])
+	rawBlock := &rawBlock{}
+
+	if err := binary.Read(buffer, binary.LittleEndian, rawBlock); err != nil {
+		return nil, err
+	}
+
+	return rawBlock, nil
+}
+
+func (db *Database) allocBlock() (newAddr Address, err error) {
+	if db.FirstFreeBlock == 0 {
+		db.BlockCount++
+		newAddr = Address(db.BlockCount)
+
+		if _, err := db.file.Seek(0, io.SeekEnd); err != nil {
+			return 0, err
+		}
+
+		if err := binary.Write(db.file, binary.LittleEndian, block{}); err != nil {
+			return 0, err
+		}
+	} else {
+		newAddr = db.FirstFreeBlock
+
+		rawBlock, err := db.readRawBlock(db.FirstFreeBlock)
+		if err != nil {
+			return 0, err
+		}
+
+		if db.LastFreeBlock == db.FirstFreeBlock {
+			db.LastFreeBlock = rawBlock.NextBlock
+		}
+
+		db.FirstFreeBlock = rawBlock.NextBlock
+	}
+
+	if err := db.writeMetadata(); err != nil {
+		return 0, err
+	}
+
+	return newAddr, nil
 }
 
 func (db *Database) freeBlock(blockAddr Address) error {
