@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strings"
 
 	"github.com/modest-sql/common"
 )
@@ -36,10 +37,10 @@ var dataTypeNames = map[dataType]string{
 }
 
 var dataTypeSizes = map[dataType]int{
-	integer:  4,
-	float:    4,
+	integer:  8,
+	float:    8,
 	boolean:  1,
-	datetime: 4,
+	datetime: 8,
 }
 
 func dataTypeOf(column interface{}) dataType {
@@ -111,17 +112,15 @@ func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordRe
 		}
 
 		switch column.DataType {
+		case datetime:
+			fallthrough
 		case integer:
 			readers[columnName] = func(r record) interface{} {
-				return int32(binary.LittleEndian.Uint32(r[offset : offset+4]))
+				return int64(binary.LittleEndian.Uint64(r[offset:size]))
 			}
 		case float:
 			readers[columnName] = func(r record) interface{} {
-				return float32(binary.LittleEndian.Uint32(r[offset : offset+4]))
-			}
-		case datetime:
-			readers[columnName] = func(r record) interface{} {
-				return int32(binary.LittleEndian.Uint32(r[offset : offset+4]))
+				return float64(binary.LittleEndian.Uint64(r[offset:size]))
 			}
 		case boolean:
 			readers[columnName] = func(r record) interface{} {
@@ -148,8 +147,8 @@ func (c tableColumn) ColumnName() string {
 	return string(bytes.TrimRight(c.ColumnNameArray[:], "\x00"))
 }
 
-func (c tableColumn) SetColumnName(columnName string) {
-	copy(c.ColumnNameArray[:], columnName)
+func (c *tableColumn) SetColumnName(columnName string) {
+	copy(c.ColumnNameArray[:], strings.ToUpper(columnName))
 }
 
 func (db Database) readHeaderBlock(blockAddr Address) (*tableHeaderBlock, error) {

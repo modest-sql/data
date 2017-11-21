@@ -61,11 +61,10 @@ func (db *Database) NewTable(tableName string, columns common.TableColumnDefiner
 		}
 
 		if tableColumn.DataType == char {
-			c := column.(common.CharTableColumn)
-			tableColumn.Size = uint16(c.Size())
+			tableColumn.Size = uint16(column.(common.CharTableColumn).Size())
 		}
 
-		copy(tableColumn.ColumnNameArray[:], column.ColumnName())
+		tableColumn.SetColumnName(column.ColumnName())
 
 		tableHeaderBlock.AddTableColumn(tableColumn)
 	}
