@@ -97,7 +97,7 @@ func TestNewTable(t *testing.T) {
 	dbName := "mock.db"
 	expectedColumnCount := 2
 	expectedIDColumnName, expectedTitleColumnName := "ID_MOVIE", "TITLE"
-	expectedTitleSize := 32
+	expectedTitleSize := uint16(32)
 
 	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
 		common.NewIntegerTableColumn(expectedIDColumnName, nil, false, true),
@@ -221,6 +221,7 @@ func TestReadTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(mockFile.Name())
 
 	buffer := bytes.NewBuffer(nil)
 	if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {

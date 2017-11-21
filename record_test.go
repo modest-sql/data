@@ -176,6 +176,7 @@ func TestUpdateRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(mockFile.Name())
 
 	buffer := bytes.NewBuffer(nil)
 	if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
@@ -301,6 +302,7 @@ func TestDeleteRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(mockFile.Name())
 
 	buffer := bytes.NewBuffer(nil)
 	if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
@@ -418,6 +420,7 @@ func TestInsertRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(mockFile.Name())
 
 	buffer := bytes.NewBuffer(nil)
 	if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
@@ -575,6 +578,7 @@ func TestInsert(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer os.Remove(mockFile.Name())
 
 		buffer := bytes.NewBuffer(nil)
 		if err := binary.Write(buffer, binary.LittleEndian, padding); err != nil {
@@ -692,6 +696,7 @@ func TestInsert(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer os.Remove(mockFile.Name())
 
 		buffer := bytes.NewBuffer(nil)
 		if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
@@ -905,6 +910,7 @@ func TestInsert(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer os.Remove(mockFile.Name())
 
 		if err := binary.Write(mockFile, binary.LittleEndian, mockDatabase); err != nil {
 			t.Fatal(err)
