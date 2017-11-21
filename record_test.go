@@ -52,7 +52,7 @@ func TestReadRecordBlock(t *testing.T) {
 
 	mockRecords := [3]struct {
 		FreeFlag uint32
-		IDMovie  uint32
+		IDMovie  int64
 		Title    [32]byte
 	}{
 		{0, 0, movieTitle("Lord of the Rings")},
@@ -148,9 +148,9 @@ func TestUpdateRecords(t *testing.T) {
 	}
 
 	expectedMockRecordsCount := 3
-	mockRecords := [102]struct {
+	mockRecords := [92]struct {
 		FreeFlag uint32
-		IDMovie  uint32
+		IDMovie  int64
 		Title    [32]byte
 	}{
 		{0, 0, movieTitle("Lord of the Rings")},
@@ -158,10 +158,10 @@ func TestUpdateRecords(t *testing.T) {
 		{0, 2, movieTitle("Avengers")},
 	}
 
-	for i := 3; i < 102; i++ {
+	for i := 3; i < 92; i++ {
 		mockRecords[i] = struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			FreeFlag: freeFlag,
@@ -274,9 +274,9 @@ func TestDeleteRecords(t *testing.T) {
 		},
 	}
 
-	mockRecords := [102]struct {
+	mockRecords := [92]struct {
 		FreeFlag uint32
-		IDMovie  uint32
+		IDMovie  int64
 		Title    [32]byte
 	}{
 		{0, 0, movieTitle("Lord of the Rings")},
@@ -284,10 +284,10 @@ func TestDeleteRecords(t *testing.T) {
 		{0, 2, movieTitle("Avengers")},
 	}
 
-	for i := 3; i < 102; i++ {
+	for i := 3; i < 92; i++ {
 		mockRecords[i] = struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			FreeFlag: freeFlag,
@@ -347,7 +347,7 @@ func TestInsertRecord(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	tableName := "MOVIES"
 	expectedRecordsCount := 4
-	expectedID, expectedTitle := uint32(3), "Thor Ragnarok"
+	expectedID, expectedTitle := int64(3), "Thor Ragnarok"
 
 	values := tableValues{
 		"ID_MOVIE": expectedID,
@@ -392,9 +392,9 @@ func TestInsertRecord(t *testing.T) {
 		},
 	}
 
-	mockRecords := [102]struct {
+	mockRecords := [92]struct {
 		FreeFlag uint32
-		IDMovie  uint32
+		IDMovie  int64
 		Title    [32]byte
 	}{
 		{0, 0, movieTitle("Lord of the Rings")},
@@ -402,10 +402,10 @@ func TestInsertRecord(t *testing.T) {
 		{0, 2, movieTitle("Avengers")},
 	}
 
-	for i := 3; i < 102; i++ {
+	for i := 3; i < 92; i++ {
 		mockRecords[i] = struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			FreeFlag: freeFlag,
@@ -470,7 +470,7 @@ func TestInsertRecord(t *testing.T) {
 	}
 
 	resultID, resultTitle := rows[3]["ID_MOVIE"], rows[3]["TITLE"]
-	if resultID.(int32) != int32(expectedID) {
+	if resultID.(int64) != int64(expectedID) {
 		t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 	}
 
@@ -483,7 +483,7 @@ func TestInsert(t *testing.T) {
 	databasesPath := filepath.Join(".", "databases")
 	tableName := "MOVIES"
 	expectedRecordsCount := 4
-	expectedID, expectedTitle := uint32(3), "Thor Ragnarok"
+	expectedID, expectedTitle := int64(3), "Thor Ragnarok"
 
 	values := tableValues{
 		"ID_MOVIE": expectedID,
@@ -536,9 +536,9 @@ func TestInsert(t *testing.T) {
 			},
 		}
 
-		mockRecords := [102]struct {
+		mockRecords := [92]struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			{0, 0, movieTitle("Lord of the Rings")},
@@ -546,24 +546,24 @@ func TestInsert(t *testing.T) {
 			{0, 2, movieTitle("Avengers")},
 		}
 
-		padding := [102]struct {
+		padding := [92]struct {
 			FreeFlag uint32
-			Padding  [36]byte
+			Padding  [40]byte
 		}{}
 
-		for i := 0; i < 102; i++ {
+		for i := 0; i < 92; i++ {
 			padding[i] = struct {
 				FreeFlag uint32
-				Padding  [36]byte
+				Padding  [40]byte
 			}{
 				FreeFlag: freeFlag,
 			}
 		}
 
-		for i := 3; i < 102; i++ {
+		for i := 3; i < 92; i++ {
 			mockRecords[i] = struct {
 				FreeFlag uint32
-				IDMovie  uint32
+				IDMovie  int64
 				Title    [32]byte
 			}{
 				FreeFlag: freeFlag,
@@ -619,7 +619,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[3]["ID_MOVIE"], rows[3]["TITLE"]
-		if resultID.(int32) != int32(expectedID) {
+		if resultID.(int64) != int64(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 
@@ -629,7 +629,7 @@ func TestInsert(t *testing.T) {
 	})
 
 	t.Run("OneAvailableSpace", func(t *testing.T) {
-		expectedRecordsCount := 102
+		expectedRecordsCount := 92
 
 		mockDatabase := struct {
 			DatabaseMetadata
@@ -659,9 +659,9 @@ func TestInsert(t *testing.T) {
 			},
 		}
 
-		mockRecords := [102]struct {
+		mockRecords := [92]struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			{0, 0, movieTitle("Lord of the Rings")},
@@ -669,20 +669,20 @@ func TestInsert(t *testing.T) {
 			{0, 2, movieTitle("Avengers")},
 		}
 
-		for i := 3; i < 101; i++ {
+		for i := 3; i < 91; i++ {
 			mockRecords[i] = struct {
 				FreeFlag uint32
-				IDMovie  uint32
+				IDMovie  int64
 				Title    [32]byte
 			}{
-				IDMovie: uint32(i),
+				IDMovie: int64(i),
 				Title:   movieTitle("No title"),
 			}
 		}
 
-		mockRecords[101] = struct {
+		mockRecords[91] = struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			FreeFlag: freeFlag,
@@ -740,8 +740,8 @@ func TestInsert(t *testing.T) {
 			t.Fatalf("Expected to read %d rows, got %d", expectedRecordsCount, rowCount)
 		}
 
-		resultID, resultTitle := rows[101]["ID_MOVIE"], rows[101]["TITLE"]
-		if resultID.(int32) != int32(expectedID) {
+		resultID, resultTitle := rows[91]["ID_MOVIE"], rows[91]["TITLE"]
+		if resultID.(int64) != int64(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 
@@ -785,9 +785,9 @@ func TestInsert(t *testing.T) {
 			},
 		}
 
-		mockRecords := [102]struct {
+		mockRecords := [92]struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			{0, 0, movieTitle("Lord of the Rings")},
@@ -795,10 +795,10 @@ func TestInsert(t *testing.T) {
 			{0, 2, movieTitle("Avengers")},
 		}
 
-		for i := 3; i < 102; i++ {
+		for i := 3; i < 92; i++ {
 			mockRecords[i] = struct {
 				FreeFlag uint32
-				IDMovie  uint32
+				IDMovie  int64
 				Title    [32]byte
 			}{
 				FreeFlag: freeFlag,
@@ -862,7 +862,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[3]["ID_MOVIE"], rows[3]["TITLE"]
-		if resultID.(int32) != int32(expectedID) {
+		if resultID.(int64) != int64(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 
@@ -952,7 +952,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		resultID, resultTitle := rows[0]["ID_MOVIE"], rows[0]["TITLE"]
-		if resultID.(int32) != int32(expectedID) {
+		if resultID.(int64) != int64(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
 

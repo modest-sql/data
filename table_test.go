@@ -193,9 +193,9 @@ func TestReadTable(t *testing.T) {
 	}
 
 	expectedMockRecordsCount := 3
-	mockRecords := [102]struct {
+	mockRecords := [92]struct {
 		FreeFlag uint32
-		IDMovie  uint32
+		IDMovie  int64
 		Title    [32]byte
 	}{
 		{0, 0, movieTitle("Lord of the Rings")},
@@ -203,10 +203,10 @@ func TestReadTable(t *testing.T) {
 		{0, 2, movieTitle("Avengers")},
 	}
 
-	for i := 3; i < 102; i++ {
+	for i := 3; i < 92; i++ {
 		mockRecords[i] = struct {
 			FreeFlag uint32
-			IDMovie  uint32
+			IDMovie  int64
 			Title    [32]byte
 		}{
 			FreeFlag: freeFlag,
@@ -255,7 +255,7 @@ func TestReadTable(t *testing.T) {
 	for i, row := range rows {
 		if val, ok := row["ID_MOVIE"]; !ok {
 			t.Fatalf("Row %d does not contain column %s", i, "ID_MOVIE")
-		} else if val != int32(mockRecords[i].IDMovie) {
+		} else if val != int64(mockRecords[i].IDMovie) {
 			t.Errorf("Expected ID_MOVIE %d, got %d", int32(mockRecords[i].IDMovie), val)
 		}
 

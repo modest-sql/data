@@ -91,26 +91,24 @@ func (db Database) deleteRecords(tableName string) (int, error) {
 }
 
 func (v tableValues) record(columns []tableColumn) (record record) {
-	record = append(record, make([]byte, 4)...)
+	record = append(record, make([]byte, freeFlagSize)...)
 
 	for _, column := range columns {
 		value := v[column.ColumnName()]
 
 		switch column.DataType {
+		case datetime:
+			fallthrough
 		case integer:
-			buffer := make([]byte, 4)
-			binary.LittleEndian.PutUint32(buffer, uint32(value.(uint32)))
+			buffer := make([]byte, dataTypeSizes[column.DataType])
+			binary.LittleEndian.PutUint64(buffer, uint64(value.(int64)))
 			record = append(record, buffer...)
 		case float:
-			buffer := make([]byte, 4)
-			binary.LittleEndian.PutUint32(buffer, uint32(value.(float32)))
+			buffer := make([]byte, dataTypeSizes[column.DataType])
+			binary.LittleEndian.PutUint64(buffer, uint64(value.(float64)))
 			record = append(record, buffer...)
 		case boolean:
 			record = append(record, value.(byte))
-		case datetime:
-			buffer := make([]byte, 4)
-			binary.LittleEndian.PutUint32(buffer, value.(uint32))
-			record = append(record, buffer...)
 		case char:
 			str := make([]byte, column.Size)
 			copy(str, value.(string))
