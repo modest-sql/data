@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strings"
 
 	"github.com/modest-sql/common"
 )
@@ -146,8 +147,8 @@ func (c tableColumn) ColumnName() string {
 	return string(bytes.TrimRight(c.ColumnNameArray[:], "\x00"))
 }
 
-func (c tableColumn) SetColumnName(columnName string) {
-	copy(c.ColumnNameArray[:], columnName)
+func (c *tableColumn) SetColumnName(columnName string) {
+	copy(c.ColumnNameArray[:], strings.ToUpper(columnName))
 }
 
 func (db Database) readHeaderBlock(blockAddr Address) (*tableHeaderBlock, error) {

@@ -45,10 +45,11 @@ func (e *tableEntryBlock) addTableEntry(tableEntry tableEntry) bool {
 }
 
 func (e tableEntryBlock) findTableEntry(tableName string) *tableEntry {
+	tableName = strings.ToUpper(tableName)
 	tableEntries := e.tableEntries()
 
 	for i := range tableEntries {
-		if strings.ToUpper(tableEntries[i].TableName()) == strings.ToUpper(tableName) {
+		if tableEntries[i].TableName() == tableName {
 			return &tableEntries[i]
 		}
 	}
@@ -60,8 +61,8 @@ func (t tableEntry) TableName() string {
 	return string(bytes.TrimRight(t.TableNameArray[:], "\x00"))
 }
 
-func (t tableEntry) SetTableName(tableName string) {
-	copy(t.TableNameArray[:], tableName)
+func (t *tableEntry) SetTableName(tableName string) {
+	copy(t.TableNameArray[:], strings.ToUpper(tableName))
 }
 
 func (db *Database) readTableEntryBlock(blockNo Address) (*tableEntryBlock, error) {
@@ -116,15 +117,13 @@ func (db *Database) findTableEntry(tableName string) (*tableEntry, error) {
 }
 
 func (db *Database) createTableEntry(tableName string) (*tableEntry, error) {
-	tableName = strings.ToUpper(tableName)
-
 	tableHeaderBlockAddr, err := db.allocBlock()
 	if err != nil {
 		return nil, err
 	}
 
 	tableEntry := &tableEntry{HeaderBlock: tableHeaderBlockAddr}
-	copy(tableEntry.TableNameArray[:], tableName)
+	tableEntry.SetTableName(tableName)
 
 	var lastTableEntryBlockAddr Address
 	var lastTableEntryBlock *tableEntryBlock
