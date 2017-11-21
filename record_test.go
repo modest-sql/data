@@ -808,6 +808,7 @@ func TestInsert(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer os.Remove(mockFile.Name())
 
 		buffer := bytes.NewBuffer(nil)
 		if err := binary.Write(buffer, binary.LittleEndian, mockRecords); err != nil {
