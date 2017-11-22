@@ -2,7 +2,6 @@ package data
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -106,18 +105,38 @@ func (addr Address) offset() int64 {
 }
 
 /*
-ExecuteCommand runs the command and returns a result object as interface{} if there is any.
-Returns an error if there was one.
+CommandFactory creates instances of common.Command according to command object received
+as parameter.
 */
-func (db *Database) ExecuteCommand(cmd interface{}) (interface{}, error) {
+func (db *Database) CommandFactory(cmd interface{}) (command common.Command) {
 	switch cmd := cmd.(type) {
 	case *common.CreateTableCommand:
-		return db.NewTable(cmd.TableName(), cmd.TableColumnDefiners())
+		command = common.NewCommand(
+			cmd,
+			common.Create,
+			func() (interface{}, error) {
+				return db.NewTable(cmd.TableName(), cmd.TableColumnDefiners())
+			},
+		)
+
 	case *common.InsertCommand:
-		return nil, db.Insert(cmd.TableName(), cmd.Values())
+		command = common.NewCommand(
+			cmd,
+			common.Insert,
+			func() (interface{}, error) {
+				return nil, db.Insert(cmd.TableName(), cmd.Values())
+			},
+		)
+
 	case *common.SelectTableCommand:
-		return db.ReadTable(cmd.SourceTable())
+		command = common.NewCommand(
+			cmd,
+			common.Select,
+			func() (interface{}, error) {
+				return db.ReadTable(cmd.TableName())
+			},
+		)
 	}
 
-	return nil, errors.New("Unrecognized command")
+	return command
 }
