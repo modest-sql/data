@@ -213,7 +213,7 @@ func (db *Database) Insert(tableName string, values tableValues) error {
 
 	record := values.record(tableHeaderBlock.TableColumns())
 
-	if err := db.checkConstraints(tableEntry, tableHeaderBlock, record); err != nil {
+	if err := db.checkConstraints(tableEntry, tableHeaderBlock, values); err != nil {
 		return err
 	}
 
