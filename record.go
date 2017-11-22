@@ -160,6 +160,46 @@ func (rb *recordBlock) insertRecord(newRecord record) bool {
 	return false
 }
 
+func (db *Database) checkAutoincrement(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+	return nil
+}
+
+func (db *Database) checkDefaultValue(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+	return nil
+}
+
+func (db *Database) checkNullable(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+	return nil
+}
+
+func (db *Database) checkPrimaryKey(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+	return nil
+}
+
+func (db *Database) checkForeignKey(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+	return nil
+}
+
+func (db *Database) checkConstraints(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+	if err := db.checkAutoincrement(tableEntry, tableHeaderBlock, values); err != nil {
+		return err
+	}
+
+	if err := db.checkDefaultValue(tableEntry, tableHeaderBlock, values); err != nil {
+		return err
+	}
+
+	if err := db.checkNullable(tableEntry, tableHeaderBlock, values); err != nil {
+		return err
+	}
+
+	if err := db.checkPrimaryKey(tableEntry, tableHeaderBlock, values); err != nil {
+		return err
+	}
+
+	return db.checkForeignKey(tableEntry, tableHeaderBlock, values)
+}
+
 func (db *Database) Insert(tableName string, values tableValues) error {
 	tableEntry, err := db.findTableEntry(tableName)
 	if err != nil {
@@ -172,6 +212,10 @@ func (db *Database) Insert(tableName string, values tableValues) error {
 	}
 
 	record := values.record(tableHeaderBlock.TableColumns())
+
+	if err := db.checkConstraints(tableEntry, tableHeaderBlock, record); err != nil {
+		return err
+	}
 
 	var lastRecordBlockAddr Address
 	var lastRecordBlock *recordBlock
