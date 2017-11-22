@@ -106,16 +106,16 @@ func (addr Address) offset() int64 {
 
 /*
 CommandFactory creates instances of common.Command according to command object received
-as parameter.
+as parameter. Once the command is run, execution is moved to the callback function received as parameter.
 */
-func (db *Database) CommandFactory(cmd interface{}) (command common.Command) {
+func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error)) (command common.Command) {
 	switch cmd := cmd.(type) {
 	case *common.CreateTableCommand:
 		command = common.NewCommand(
 			cmd,
 			common.Create,
-			func() (interface{}, error) {
-				return db.NewTable(cmd.TableName(), cmd.TableColumnDefiners())
+			func() {
+				cb(db.NewTable(cmd.TableName(), cmd.TableColumnDefiners()))
 			},
 		)
 
@@ -123,8 +123,8 @@ func (db *Database) CommandFactory(cmd interface{}) (command common.Command) {
 		command = common.NewCommand(
 			cmd,
 			common.Insert,
-			func() (interface{}, error) {
-				return nil, db.Insert(cmd.TableName(), cmd.Values())
+			func() {
+				cb(nil, db.Insert(cmd.TableName(), cmd.Values()))
 			},
 		)
 
@@ -132,8 +132,8 @@ func (db *Database) CommandFactory(cmd interface{}) (command common.Command) {
 		command = common.NewCommand(
 			cmd,
 			common.Select,
-			func() (interface{}, error) {
-				return db.ReadTable(cmd.TableName())
+			func() {
+				cb(db.ReadTable(cmd.TableName()))
 			},
 		)
 	}
