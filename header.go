@@ -99,7 +99,7 @@ type recordReader func(record) interface{}
 
 func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordReader) {
 	readers = map[string]recordReader{}
-	size = freeFlagSize
+	size = freeFlagSize + nullBitmapSize
 
 	for _, column := range h.TableColumns() {
 		columnName := column.ColumnName()

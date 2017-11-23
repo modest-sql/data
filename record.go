@@ -12,6 +12,8 @@ type tableValues map[string]interface{}
 const (
 	maxRecordDataLength = 4084
 	freeFlagSize        = 4
+	nullBitmapSize      = 8
+	maxCharLength       = maxRecordDataLength - freeFlagSize - nullBitmapSize
 	freeFlag            = 0x99887766
 	fullFlag            = 0x10ccff01
 )
@@ -91,7 +93,7 @@ func (db Database) deleteRecords(tableName string) (int, error) {
 }
 
 func (v tableValues) record(columns []tableColumn) (record record) {
-	record = append(record, make([]byte, freeFlagSize)...)
+	record = append(record, make([]byte, freeFlagSize+nullBitmapSize)...)
 
 	for _, column := range columns {
 		value := v[column.ColumnName()]

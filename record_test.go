@@ -392,21 +392,23 @@ func TestInsertRecord(t *testing.T) {
 		},
 	}
 
-	mockRecords := [92]struct {
-		FreeFlag uint32
-		IDMovie  int64
-		Title    [32]byte
+	mockRecords := [78]struct {
+		FreeFlag   uint32
+		NullBitmap [nullBitmapSize]byte
+		IDMovie    int64
+		Title      [32]byte
 	}{
-		{0, 0, movieTitle("Lord of the Rings")},
-		{0, 1, movieTitle("Harry Potter")},
-		{0, 2, movieTitle("Avengers")},
+		{FreeFlag: 0, IDMovie: 0, Title: movieTitle("Lord of the Rings")},
+		{FreeFlag: 0, IDMovie: 1, Title: movieTitle("Harry Potter")},
+		{FreeFlag: 0, IDMovie: 2, Title: movieTitle("Avengers")},
 	}
 
-	for i := 3; i < 92; i++ {
+	for i := 3; i < 78; i++ {
 		mockRecords[i] = struct {
-			FreeFlag uint32
-			IDMovie  int64
-			Title    [32]byte
+			FreeFlag   uint32
+			NullBitmap [nullBitmapSize]byte
+			IDMovie    int64
+			Title      [32]byte
 		}{
 			FreeFlag: freeFlag,
 		}
@@ -536,35 +538,37 @@ func TestInsert(t *testing.T) {
 			},
 		}
 
-		mockRecords := [92]struct {
-			FreeFlag uint32
-			IDMovie  int64
-			Title    [32]byte
+		mockRecords := [78]struct {
+			FreeFlag   uint32
+			NullBitmap [nullBitmapSize]byte
+			IDMovie    int64
+			Title      [32]byte
 		}{
-			{0, 0, movieTitle("Lord of the Rings")},
-			{0, 1, movieTitle("Harry Potter")},
-			{0, 2, movieTitle("Avengers")},
+			{FreeFlag: 0, IDMovie: 0, Title: movieTitle("Lord of the Rings")},
+			{FreeFlag: 0, IDMovie: 1, Title: movieTitle("Harry Potter")},
+			{FreeFlag: 0, IDMovie: 2, Title: movieTitle("Avengers")},
 		}
 
-		padding := [92]struct {
+		padding := [78]struct {
 			FreeFlag uint32
-			Padding  [40]byte
+			Padding  [48]byte
 		}{}
 
-		for i := 0; i < 92; i++ {
+		for i := 0; i < 78; i++ {
 			padding[i] = struct {
 				FreeFlag uint32
-				Padding  [40]byte
+				Padding  [48]byte
 			}{
 				FreeFlag: freeFlag,
 			}
 		}
 
-		for i := 3; i < 92; i++ {
+		for i := 3; i < 78; i++ {
 			mockRecords[i] = struct {
-				FreeFlag uint32
-				IDMovie  int64
-				Title    [32]byte
+				FreeFlag   uint32
+				NullBitmap [nullBitmapSize]byte
+				IDMovie    int64
+				Title      [32]byte
 			}{
 				FreeFlag: freeFlag,
 			}
@@ -629,7 +633,7 @@ func TestInsert(t *testing.T) {
 	})
 
 	t.Run("OneAvailableSpace", func(t *testing.T) {
-		expectedRecordsCount := 92
+		expectedRecordsCount := 78
 
 		mockDatabase := struct {
 			DatabaseMetadata
@@ -659,31 +663,34 @@ func TestInsert(t *testing.T) {
 			},
 		}
 
-		mockRecords := [92]struct {
-			FreeFlag uint32
-			IDMovie  int64
-			Title    [32]byte
+		mockRecords := [78]struct {
+			FreeFlag   uint32
+			NullBitmap [nullBitmapSize]byte
+			IDMovie    int64
+			Title      [32]byte
 		}{
-			{0, 0, movieTitle("Lord of the Rings")},
-			{0, 1, movieTitle("Harry Potter")},
-			{0, 2, movieTitle("Avengers")},
+			{FreeFlag: 0, IDMovie: 0, Title: movieTitle("Lord of the Rings")},
+			{FreeFlag: 0, IDMovie: 1, Title: movieTitle("Harry Potter")},
+			{FreeFlag: 0, IDMovie: 2, Title: movieTitle("Avengers")},
 		}
 
-		for i := 3; i < 91; i++ {
+		for i := 3; i < 77; i++ {
 			mockRecords[i] = struct {
-				FreeFlag uint32
-				IDMovie  int64
-				Title    [32]byte
+				FreeFlag   uint32
+				NullBitmap [nullBitmapSize]byte
+				IDMovie    int64
+				Title      [32]byte
 			}{
 				IDMovie: int64(i),
 				Title:   movieTitle("No title"),
 			}
 		}
 
-		mockRecords[91] = struct {
-			FreeFlag uint32
-			IDMovie  int64
-			Title    [32]byte
+		mockRecords[77] = struct {
+			FreeFlag   uint32
+			NullBitmap [nullBitmapSize]byte
+			IDMovie    int64
+			Title      [32]byte
 		}{
 			FreeFlag: freeFlag,
 		}
@@ -740,7 +747,7 @@ func TestInsert(t *testing.T) {
 			t.Fatalf("Expected to read %d rows, got %d", expectedRecordsCount, rowCount)
 		}
 
-		resultID, resultTitle := rows[91]["ID_MOVIE"], rows[91]["TITLE"]
+		resultID, resultTitle := rows[77]["ID_MOVIE"], rows[77]["TITLE"]
 		if resultID.(int64) != int64(expectedID) {
 			t.Errorf("Expected to read movie id %d, got %d", expectedID, resultID)
 		}
@@ -785,21 +792,23 @@ func TestInsert(t *testing.T) {
 			},
 		}
 
-		mockRecords := [92]struct {
-			FreeFlag uint32
-			IDMovie  int64
-			Title    [32]byte
+		mockRecords := [78]struct {
+			FreeFlag   uint32
+			NullBitmap [nullBitmapSize]byte
+			IDMovie    int64
+			Title      [32]byte
 		}{
-			{0, 0, movieTitle("Lord of the Rings")},
-			{0, 1, movieTitle("Harry Potter")},
-			{0, 2, movieTitle("Avengers")},
+			{FreeFlag: 0, IDMovie: 0, Title: movieTitle("Lord of the Rings")},
+			{FreeFlag: 0, IDMovie: 1, Title: movieTitle("Harry Potter")},
+			{FreeFlag: 0, IDMovie: 2, Title: movieTitle("Avengers")},
 		}
 
-		for i := 3; i < 92; i++ {
+		for i := 3; i < 78; i++ {
 			mockRecords[i] = struct {
-				FreeFlag uint32
-				IDMovie  int64
-				Title    [32]byte
+				FreeFlag   uint32
+				NullBitmap [nullBitmapSize]byte
+				IDMovie    int64
+				Title      [32]byte
 			}{
 				FreeFlag: freeFlag,
 			}
