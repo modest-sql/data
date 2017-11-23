@@ -10,15 +10,16 @@ import (
 
 const (
 	maxTableNameLength         = 60
-	maxTableEntries            = 63
-	tableEntryBlockPaddingSize = 52
+	maxTableEntries            = 60
+	tableEntryBlockPaddingSize = 4
 )
 
 type tableEntries [maxTableEntries]tableEntry
 
 type tableEntry struct {
-	HeaderBlock    Address
-	TableNameArray [maxTableNameLength]byte
+	HeaderBlock     Address
+	ConstraintBlock Address
+	TableNameArray  [maxTableNameLength]byte
 }
 
 type tableEntryBlock struct {
