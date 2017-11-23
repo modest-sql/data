@@ -101,7 +101,7 @@ func TestNewTable(t *testing.T) {
 
 	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
 		common.NewIntegerTableColumn(expectedIDColumnName, nil, false, true, false, false),
-		common.NewCharTableColumn(expectedTitleColumnName, nil, false, false, false, false, expectedTitleSize),
+		common.NewCharTableColumn(expectedTitleColumnName, "TEST", false, false, false, false, expectedTitleSize),
 	})
 
 	db, err := NewDatabase(dbName)
@@ -147,6 +147,11 @@ func TestNewTable(t *testing.T) {
 
 	if titleColumn.ColumnSize != uint16(expectedTitleSize) {
 		t.Errorf("Expected column to be of size %d, got %d", expectedTitleSize, titleColumn.ColumnSize)
+	}
+
+	constraints, err := db.columnConstraints("MOVIES")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

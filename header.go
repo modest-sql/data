@@ -192,6 +192,13 @@ func (c *tableColumn) SetColumnName(columnName string) {
 	copy(c.ColumnNameArray[:], strings.ToUpper(columnName))
 }
 
+func (c tableColumn) ColumnSize() int {
+	if c.DataType != char {
+		return dataTypeSizes[c.DataType]
+	}
+	return int(c.Size)
+}
+
 func (db Database) readHeaderBlock(blockAddr Address) (*tableHeaderBlock, error) {
 	block, err := db.readBlock(blockAddr)
 	if err != nil {

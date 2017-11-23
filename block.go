@@ -10,12 +10,13 @@ import (
 type blockSignature uint32
 
 const (
-	blockSize                                = 4096
-	rawBlockPadding                          = blockSize - 4*2
-	nullBlockAddr             Address        = 0
-	tableEntryBlockSignature  blockSignature = 0xff77ff77
-	tableHeaderBlockSignature blockSignature = 0xee11ee11
-	recordBlockSignature      blockSignature = 0xaa88aa88
+	blockSize                                    = 4096
+	rawBlockPadding                              = blockSize - 4*2
+	nullBlockAddr                 Address        = 0
+	tableEntryBlockSignature      blockSignature = 0xff77ff77
+	tableHeaderBlockSignature     blockSignature = 0xee11ee11
+	recordBlockSignature          blockSignature = 0xaa88aa88
+	tableConstraintBlockSignature blockSignature = 0xdd11cc47
 )
 
 type block [blockSize]byte
