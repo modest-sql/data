@@ -175,28 +175,38 @@ func (db *Database) checkDefaultValue(tableName string, tableColumn tableColumn,
 	return nil
 }
 
-func (db *Database) checkNullable(tableName string, tableColumn tableColumn, values tableValues, constraints map[string]columnConstraint) error {
+func (db *Database) checkNullable(tableName string, tableColumn tableColumn, values tableValues) error {
+	if tableColumn.IsNullable() {
+		return nil
+	}
+
+	columnName := tableColumn.ColumnName()
+	v, ok := values[columnName]
+
+	if v == nil || (!ok && !tableColumn.HasDefaultValue()) {
+		return fmt.Errorf("Column %s can't be null", columnName)
+	}
+
 	return nil
 }
 
-func (db *Database) checkPrimaryKey(tableName string, tableColumn tableColumn, values tableValues, constraints map[string]columnConstraint) error {
+func (db *Database) checkPrimaryKey(tableName string, tableColumn tableColumn, values tableValues) error {
 	return nil
 }
 
-func (db *Database) checkForeignKey(tableName string, tableColumn tableColumn, values tableValues, constraints map[string]columnConstraint) error {
+func (db *Database) checkForeignKey(tableName string, tableColumn tableColumn, values tableValues) error {
 	return nil
 }
 
 func (db *Database) checkConstraints(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
-	columnConstraints, err := db.columnConstraints(tableEntry.TableName())
-	if err != nil {
-		return err
-	}
+	// columnConstraints, err := db.columnConstraints(tableEntry.TableName())
+	// if err != nil {
+	// 	return err
+	// }
 
 	tableColumns := tableHeaderBlock.TableColumns()
 
-	flagValidators := []func(string, tableColumn, tableValues, map[string]columnConstraint) error{
-		db.checkDefaultValue,
+	flagValidators := []func(string, tableColumn, tableValues) error{
 		db.checkNullable,
 		db.checkPrimaryKey,
 		db.checkForeignKey,
@@ -204,7 +214,7 @@ func (db *Database) checkConstraints(tableEntry *tableEntry, tableHeaderBlock *t
 
 	for _, flagValidator := range flagValidators {
 		for _, tableColumn := range tableColumns {
-			if err := flagValidator(tableEntry.TableName(), tableColumn, values, columnConstraints); err != nil {
+			if err := flagValidator(tableEntry.TableName(), tableColumn, values); err != nil {
 				return err
 			}
 		}
