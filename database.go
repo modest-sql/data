@@ -112,15 +112,15 @@ func (db *Database) init() error {
 	}
 
 	countersTableColumns := common.TableColumnDefiners{
-		common.NewCharTableColumn("Table", nil, false, false, maxTableNameLength),
-		common.NewCharTableColumn("Column", nil, false, false, maxColumnNameLength),
-		common.NewIntegerTableColumn("Counter", nil, false, false),
+		common.NewCharTableColumn("TABLE", nil, false, false, maxTableNameLength),
+		common.NewCharTableColumn("COLUMN", nil, false, false, maxColumnNameLength),
+		common.NewIntegerTableColumn("COUNTER", nil, false, false),
 	}
 
 	defaultValuesTableColumns := common.TableColumnDefiners{
-		common.NewCharTableColumn("Table", nil, false, false, maxTableNameLength),
-		common.NewCharTableColumn("Column", nil, false, false, maxColumnNameLength),
-		common.NewCharTableColumn("DefaultValue", nil, false, false, maxCharLength),
+		common.NewCharTableColumn("TABLE", nil, false, false, maxTableNameLength),
+		common.NewCharTableColumn("COLUMN", nil, false, false, maxColumnNameLength),
+		common.NewCharTableColumn("DEFAULT_VALUE", nil, false, false, maxCharLength),
 	}
 
 	if _, err := db.NewTable(countersTableName, countersTableColumns); err != nil {
@@ -132,6 +132,55 @@ func (db *Database) init() error {
 	}
 
 	return nil
+}
+
+func (db Database) counters() (counters map[string]map[string]int64, err error) {
+	countersResultSet, err := db.ReadTable(countersTableName)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range countersResultSet.Rows {
+		counters[row["TABLE"].(string)][row["COLUMN"].(string)] = row["COUNTER"].(int64)
+	}
+
+	return counters, nil
+}
+
+func (db Database) defaultValues() (defaultValues map[string]map[string]interface{}, err error) {
+	defaultValuesResultSet, err := db.ReadTable(defaultValuesTableName)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range defaultValuesResultSet.Rows {
+		defaultValues[row["TABLE"].(string)][row["COLUMN"].(string)] = row["DEFAULT_VALUE"].(string)
+	}
+
+	for tableName, columnMap := range defaultValues {
+		tableHeaderBlock, err := db.findHeaderBlock(tableName)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, column := range tableHeaderBlock.TableColumns() {
+			columnName := column.ColumnName()
+			rawData := []byte(columnMap[columnName].(string))
+
+			switch column.DataType {
+			case datetime:
+				fallthrough
+			case integer:
+				columnMap[columnName] = int64(binary.LittleEndian.Uint64(rawData))
+			case float:
+				columnMap[columnName] = float64(binary.LittleEndian.Uint64(rawData))
+			case boolean:
+				columnMap[columnName] = rawData[0] != 0
+			}
+		}
+	}
+
+	return defaultValues, nil
 }
 
 /*
