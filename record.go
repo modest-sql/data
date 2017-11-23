@@ -171,40 +171,46 @@ func (db *Database) checkAutoincrement(tableEntry *tableEntry, tableHeaderBlock 
 	return nil
 }
 
-func (db *Database) checkDefaultValue(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkDefaultValue(tableName string, tableColumn tableColumn, values tableValues, constraints map[string]columnConstraint) error {
 	return nil
 }
 
-func (db *Database) checkNullable(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkNullable(tableName string, tableColumn tableColumn, values tableValues, constraints map[string]columnConstraint) error {
 	return nil
 }
 
-func (db *Database) checkPrimaryKey(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkPrimaryKey(tableName string, tableColumn tableColumn, values tableValues, constraints map[string]columnConstraint) error {
 	return nil
 }
 
-func (db *Database) checkForeignKey(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkForeignKey(tableName string, tableColumn tableColumn, values tableValues, constraints map[string]columnConstraint) error {
 	return nil
 }
 
 func (db *Database) checkConstraints(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
-	if err := db.checkAutoincrement(tableEntry, tableHeaderBlock, values); err != nil {
+	columnConstraints, err := db.columnConstraints(tableEntry.TableName())
+	if err != nil {
 		return err
 	}
 
-	if err := db.checkDefaultValue(tableEntry, tableHeaderBlock, values); err != nil {
-		return err
+	tableColumns := tableHeaderBlock.TableColumns()
+
+	flagValidators := []func(string, tableColumn, tableValues, map[string]columnConstraint) error{
+		db.checkDefaultValue,
+		db.checkNullable,
+		db.checkPrimaryKey,
+		db.checkForeignKey,
 	}
 
-	if err := db.checkNullable(tableEntry, tableHeaderBlock, values); err != nil {
-		return err
+	for _, flagValidator := range flagValidators {
+		for _, tableColumn := range tableColumns {
+			if err := flagValidator(tableEntry.TableName(), tableColumn, values, columnConstraints); err != nil {
+				return err
+			}
+		}
 	}
 
-	if err := db.checkPrimaryKey(tableEntry, tableHeaderBlock, values); err != nil {
-		return err
-	}
-
-	return db.checkForeignKey(tableEntry, tableHeaderBlock, values)
+	return nil
 }
 
 func (db *Database) Insert(tableName string, values tableValues) error {

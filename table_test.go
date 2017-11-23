@@ -148,11 +148,6 @@ func TestNewTable(t *testing.T) {
 	if titleColumn.ColumnSize != uint16(expectedTitleSize) {
 		t.Errorf("Expected column to be of size %d, got %d", expectedTitleSize, titleColumn.ColumnSize)
 	}
-
-	constraints, err := db.columnConstraints("MOVIES")
-	if err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestReadTable(t *testing.T) {
