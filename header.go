@@ -144,6 +144,26 @@ type tableColumn struct {
 	ColumnNameArray [maxColumnNameLength]byte
 }
 
+func (c *tableColumn) SetDefaultValue() {
+	c.ConstraintFlags |= 1
+}
+
+func (c *tableColumn) SetAutoincrementable() {
+	c.ConstraintFlags |= (1 << 1)
+}
+
+func (c *tableColumn) SetNullable() {
+	c.ConstraintFlags |= (1 << 2)
+}
+
+func (c *tableColumn) SetPrimaryKey() {
+	c.ConstraintFlags |= (1 << 3)
+}
+
+func (c *tableColumn) SetForeignKey() {
+	c.ConstraintFlags |= (1 << 4)
+}
+
 func (c tableColumn) HasDefaultValue() bool {
 	return (c.ConstraintFlags & 1) != 0
 }
