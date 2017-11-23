@@ -98,6 +98,10 @@ func (v tableValues) record(columns []tableColumn) (record record) {
 	for _, column := range columns {
 		value := v[column.ColumnName()]
 
+		if value == nil {
+			continue
+		}
+
 		switch column.DataType {
 		case datetime:
 			fallthrough
@@ -183,7 +187,7 @@ func (db *Database) checkNullable(tableName string, tableColumn tableColumn, val
 	columnName := tableColumn.ColumnName()
 	v, ok := values[columnName]
 
-	if v == nil || (!ok && !tableColumn.HasDefaultValue()) {
+	if (v == nil && ok) || (!ok && !tableColumn.HasDefaultValue()) {
 		return fmt.Errorf("Column %s can't be null", columnName)
 	}
 

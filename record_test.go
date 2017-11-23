@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/modest-sql/common"
 )
 
 func TestReadRecordBlock(t *testing.T) {
@@ -969,4 +971,31 @@ func TestInsert(t *testing.T) {
 			t.Errorf("Expected to read movie title `%s', got `%s'", expectedTitle, resultTitle)
 		}
 	})
+}
+
+func TestConstraints(t *testing.T) {
+	dbName := "mock.db"
+
+	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
+		common.NewIntegerTableColumn("ID_MOVIE", nil, false, true, false, false),
+		common.NewCharTableColumn("TITLE", "TEST", false, false, false, false, 32),
+	})
+
+	db, err := NewDatabase(dbName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(filepath.Join(databasesDirName, dbName))
+
+	if _, err := db.NewTable(createCmd.TableName(), createCmd.TableColumnDefiners()); err != nil {
+		t.Fatal(err)
+	}
+
+	values := tableValues{
+		"ID_MOVIE": int64(0),
+	}
+
+	if err := db.Insert("MOVIES", values); err != nil {
+		t.Fatal(err)
+	}
 }
