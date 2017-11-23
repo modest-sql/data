@@ -100,8 +100,8 @@ func TestNewTable(t *testing.T) {
 	expectedTitleSize := uint16(32)
 
 	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
-		common.NewIntegerTableColumn(expectedIDColumnName, nil, false, true),
-		common.NewCharTableColumn(expectedTitleColumnName, nil, false, false, expectedTitleSize),
+		common.NewIntegerTableColumn(expectedIDColumnName, nil, false, true, false, false),
+		common.NewCharTableColumn(expectedTitleColumnName, nil, false, false, false, false, expectedTitleSize),
 	})
 
 	db, err := NewDatabase(dbName)

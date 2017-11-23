@@ -12,9 +12,9 @@ import (
 
 func TestNewDatabase(t *testing.T) {
 	var databaseName string = "test.db"
-	var expectedFirstEntryBlock, expectedLastEntryBlock data.Address = 2, 0
+	var expectedFirstEntryBlock, expectedLastEntryBlock data.Address = 0, 0
 	var expectedFirstFreeBlock, expectedLastFreeBlock data.Address = 0, 0
-	var expectedFileSize int64 = 4096*3 + 128
+	var expectedFileSize int64 = 128
 
 	db, err := data.NewDatabase(databaseName)
 
