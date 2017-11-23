@@ -143,6 +143,13 @@ type tableColumn struct {
 	ColumnNameArray [maxColumnNameLength]byte
 }
 
+func (c tableColumn) ColumnSize() int {
+	if c.DataType != char {
+		return dataTypeSizes[c.DataType]
+	}
+	return int(c.Size)
+}
+
 func (c tableColumn) ColumnName() string {
 	return string(bytes.TrimRight(c.ColumnNameArray[:], "\x00"))
 }
