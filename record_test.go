@@ -977,7 +977,7 @@ func TestConstraints(t *testing.T) {
 	dbName := "mock.db"
 
 	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
-		common.NewIntegerTableColumn("ID_MOVIE", nil, false, true, false, false),
+		common.NewIntegerTableColumn("ID_MOVIE", nil, false, true, true, false),
 		common.NewCharTableColumn("TITLE", "TEST", false, false, false, false, 32),
 	})
 

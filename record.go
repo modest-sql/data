@@ -179,7 +179,7 @@ func (db *Database) checkDefaultValue(tableName string, tableColumn tableColumn,
 	return nil
 }
 
-func (db *Database) checkNullable(tableName string, tableColumn tableColumn, values tableValues) error {
+func (db *Database) checkNullable(tableColumn tableColumn, values tableValues) error {
 	if tableColumn.IsNullable() {
 		return nil
 	}
@@ -194,7 +194,24 @@ func (db *Database) checkNullable(tableName string, tableColumn tableColumn, val
 	return nil
 }
 
-func (db *Database) checkPrimaryKey(tableName string, tableColumn tableColumn, values tableValues) error {
+func (db *Database) checkPrimaryKey(rows []Row, tableColumn tableColumn, values tableValues) error {
+	if !tableColumn.IsPrimaryKey() {
+		return nil
+	}
+
+	columnName := tableColumn.ColumnName()
+	v, ok := values[columnName]
+
+	if (v == nil && ok) || (!ok && !tableColumn.HasDefaultValue()) {
+		return fmt.Errorf("Primary key %s can't be null", columnName)
+	}
+
+	for _, row := range rows {
+		if row[columnName] == v {
+			return fmt.Errorf("Duplicate primary key %v", v)
+		}
+	}
+
 	return nil
 }
 
@@ -208,19 +225,20 @@ func (db *Database) checkConstraints(tableEntry *tableEntry, tableHeaderBlock *t
 	// 	return err
 	// }
 
-	tableColumns := tableHeaderBlock.TableColumns()
-
-	flagValidators := []func(string, tableColumn, tableValues) error{
-		db.checkNullable,
-		db.checkPrimaryKey,
-		db.checkForeignKey,
+	resultSet, err := db.ReadTable(tableEntry.TableName())
+	if err != nil {
+		return err
 	}
 
-	for _, flagValidator := range flagValidators {
-		for _, tableColumn := range tableColumns {
-			if err := flagValidator(tableEntry.TableName(), tableColumn, values); err != nil {
-				return err
-			}
+	tableColumns := tableHeaderBlock.TableColumns()
+
+	for _, tableColumn := range tableColumns {
+		if err := db.checkNullable(tableColumn, values); err != nil {
+			return err
+		}
+
+		if err := db.checkPrimaryKey(resultSet.Rows, tableColumn, values); err != nil {
+			return err
 		}
 	}
 
