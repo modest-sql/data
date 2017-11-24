@@ -101,8 +101,9 @@ func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordRe
 	readers = map[string]recordReader{}
 	size = freeFlagSize + nullBitmapSize
 
-	for _, column := range h.TableColumns() {
+	for i, column := range h.TableColumns() {
 		columnName := column.ColumnName()
+		columnIndex := uint(i)
 		offset := size
 
 		if column.DataType == char {
@@ -116,18 +117,34 @@ func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordRe
 			fallthrough
 		case integer:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return int64(binary.LittleEndian.Uint64(r[offset:size]))
 			}
 		case float:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return float64(binary.LittleEndian.Uint64(r[offset:size]))
 			}
 		case boolean:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return r[offset] != 0
 			}
 		case char:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return string(bytes.TrimRight(r[offset:size], "\x00"))
 			}
 		}
