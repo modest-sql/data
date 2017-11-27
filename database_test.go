@@ -18,7 +18,6 @@ func tmpDbName() string {
 
 func TestNewDatabase(t *testing.T) {
 	var testDbPath string = tmpDbName()
-	var testBlockSize uint32 = 4096
 
 	t.Run("FileSize", func(t *testing.T) {
 		var expectedFileSize int64 = int64(testBlockSize)
