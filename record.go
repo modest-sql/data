@@ -12,6 +12,8 @@ type tableValues map[string]interface{}
 const (
 	maxRecordDataLength = 4084
 	freeFlagSize        = 4
+	nullBitmapSize      = 8
+	maxCharLength       = maxRecordDataLength - freeFlagSize - nullBitmapSize
 	freeFlag            = 0x99887766
 	fullFlag            = 0x10ccff01
 )
@@ -31,6 +33,14 @@ func (rd recordData) split(recordSize int) (records []record) {
 }
 
 type record []byte
+
+func (r record) NullBitmap() uint16 {
+	return binary.LittleEndian.Uint16(r[4:8])
+}
+
+func (r record) ColumnIsNull(index uint) bool {
+	return (r.NullBitmap() & (1 << index)) != 0
+}
 
 func (r record) isFree() bool {
 	return binary.LittleEndian.Uint32(r[:4]) == freeFlag
@@ -91,10 +101,17 @@ func (db Database) deleteRecords(tableName string) (int, error) {
 }
 
 func (v tableValues) record(columns []tableColumn) (record record) {
-	record = append(record, make([]byte, freeFlagSize)...)
+	nullBitmap := uint16(0)
 
-	for _, column := range columns {
+	record = []byte{}
+
+	for i, column := range columns {
 		value := v[column.ColumnName()]
+
+		if value == nil {
+			nullBitmap |= (1 << uint(i))
+			continue
+		}
 
 		switch column.DataType {
 		case datetime:
@@ -108,7 +125,12 @@ func (v tableValues) record(columns []tableColumn) (record record) {
 			binary.LittleEndian.PutUint64(buffer, uint64(value.(float64)))
 			record = append(record, buffer...)
 		case boolean:
-			record = append(record, value.(byte))
+			b := value.(bool)
+			if b {
+				record = append(record, 1)
+			} else {
+				record = append(record, 0)
+			}
 		case char:
 			str := make([]byte, column.Size)
 			copy(str, value.(string))
@@ -116,7 +138,11 @@ func (v tableValues) record(columns []tableColumn) (record record) {
 		}
 	}
 
-	return record
+	result := make([]byte, 12)
+	binary.LittleEndian.PutUint16(result[4:], nullBitmap)
+	result = append(result, record...)
+
+	return result
 }
 
 func (rb *recordBlock) init(recordSize int) {
@@ -164,40 +190,110 @@ func (db *Database) checkAutoincrement(tableEntry *tableEntry, tableHeaderBlock 
 	return nil
 }
 
-func (db *Database) checkDefaultValue(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkDefaultValue(tableColumn tableColumn, values *tableValues, constraints map[string]columnConstraint) error {
+	if tableColumn.HasDefaultValue() {
+		return nil
+	}
+
+	columnName := tableColumn.ColumnName()
+
+	if _, ok := (*values)[columnName]; !ok {
+		constraint := constraints[columnName]
+		switch tableColumn.DataType {
+		case integer:
+			(*values)[columnName] = constraint.DefaultIntValue()
+		case float:
+			(*values)[columnName] = constraint.DefaultFloatValue()
+		case datetime:
+			(*values)[columnName] = constraint.DefaultDatetimeValue()
+		case boolean:
+			(*values)[columnName] = constraint.DefaultBooleanValue()
+		case char:
+			(*values)[columnName] = constraint.DefaultCharValue(tableColumn.Size)
+		}
+	}
+
 	return nil
 }
 
-func (db *Database) checkNullable(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkNullable(tableColumn tableColumn, values tableValues) error {
+	if tableColumn.IsNullable() {
+		return nil
+	}
+
+	columnName := tableColumn.ColumnName()
+	v, ok := values[columnName]
+
+	if (v == nil && ok) || (!ok && !tableColumn.HasDefaultValue()) {
+		return fmt.Errorf("Column %s can't be null", columnName)
+	}
+
 	return nil
 }
 
-func (db *Database) checkPrimaryKey(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkPrimaryKey(rows []Row, tableColumn tableColumn, values tableValues) error {
+	if !tableColumn.IsPrimaryKey() {
+		return nil
+	}
+
+	columnName := tableColumn.ColumnName()
+	v, ok := values[columnName]
+
+	if (v == nil && ok) || (!ok && !tableColumn.HasDefaultValue()) {
+		return fmt.Errorf("Primary key %s can't be null", columnName)
+	}
+
+	for _, row := range rows {
+		if row[columnName] == v {
+			return fmt.Errorf("Duplicate primary key %v", v)
+		}
+	}
+
 	return nil
 }
 
-func (db *Database) checkForeignKey(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
+func (db *Database) checkForeignKey(tableName string, tableColumn tableColumn, values tableValues) error {
 	return nil
 }
 
-func (db *Database) checkConstraints(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values tableValues) error {
-	if err := db.checkAutoincrement(tableEntry, tableHeaderBlock, values); err != nil {
+func (db *Database) checkConstraints(tableEntry *tableEntry, tableHeaderBlock *tableHeaderBlock, values *tableValues) error {
+	columnConstraints, err := db.columnConstraints(tableEntry.TableName())
+	if err != nil {
 		return err
 	}
 
-	if err := db.checkDefaultValue(tableEntry, tableHeaderBlock, values); err != nil {
+	resultSet, err := db.ReadTable(tableEntry.TableName())
+	if err != nil {
 		return err
 	}
 
-	if err := db.checkNullable(tableEntry, tableHeaderBlock, values); err != nil {
-		return err
+	tableColumns := tableHeaderBlock.TableColumns()
+
+	for _, tableColumn := range tableColumns {
+		if err := db.checkNullable(tableColumn, *values); err != nil {
+			return err
+		}
+
+		if err := db.checkDefaultValue(tableColumn, values, columnConstraints); err != nil {
+			return err
+		}
+
+		if err := db.checkPrimaryKey(resultSet.Rows, tableColumn, *values); err != nil {
+			return err
+		}
 	}
 
-	if err := db.checkPrimaryKey(tableEntry, tableHeaderBlock, values); err != nil {
-		return err
-	}
+	return nil
+}
 
-	return db.checkForeignKey(tableEntry, tableHeaderBlock, values)
+func (th tableHeaderBlock) missingColumns(values *tableValues) {
+	columns := th.TableColumns()
+
+	for _, column := range columns {
+		if _, ok := (*values)[column.ColumnName()]; !ok {
+			(*values)[column.ColumnName()] = nil
+		}
+	}
 }
 
 func (db *Database) Insert(tableName string, values tableValues) error {
@@ -213,9 +309,11 @@ func (db *Database) Insert(tableName string, values tableValues) error {
 
 	record := values.record(tableHeaderBlock.TableColumns())
 
-	if err := db.checkConstraints(tableEntry, tableHeaderBlock, values); err != nil {
+	if err := db.checkConstraints(tableEntry, tableHeaderBlock, &values); err != nil {
 		return err
 	}
+
+	tableHeaderBlock.missingColumns(&values)
 
 	var lastRecordBlockAddr Address
 	var lastRecordBlock *recordBlock

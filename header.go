@@ -14,8 +14,8 @@ type tableColumns [maxTableColumns]tableColumn
 
 const (
 	maxColumnNameLength         = 60
-	maxTableColumns             = 63
-	tableHeaderBlockPaddingSize = 48
+	maxTableColumns             = 61
+	tableHeaderBlockPaddingSize = 54
 )
 
 const (
@@ -99,10 +99,11 @@ type recordReader func(record) interface{}
 
 func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordReader) {
 	readers = map[string]recordReader{}
-	size = freeFlagSize
+	size = freeFlagSize + nullBitmapSize
 
-	for _, column := range h.TableColumns() {
+	for i, column := range h.TableColumns() {
 		columnName := column.ColumnName()
+		columnIndex := uint(i)
 		offset := size
 
 		if column.DataType == char {
@@ -116,18 +117,34 @@ func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordRe
 			fallthrough
 		case integer:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return int64(binary.LittleEndian.Uint64(r[offset:size]))
 			}
 		case float:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return float64(binary.LittleEndian.Uint64(r[offset:size]))
 			}
 		case boolean:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return r[offset] != 0
 			}
 		case char:
 			readers[columnName] = func(r record) interface{} {
+				if r.ColumnIsNull(columnIndex) {
+					return nil
+				}
+
 				return string(bytes.TrimRight(r[offset:size], "\x00"))
 			}
 		}
@@ -140,7 +157,48 @@ func (h tableHeaderBlock) recordReaders() (size int, readers map[string]recordRe
 type tableColumn struct {
 	DataType        dataType
 	Size            uint16
+	ConstraintFlags uint16
 	ColumnNameArray [maxColumnNameLength]byte
+}
+
+func (c *tableColumn) SetDefaultValue() {
+	c.ConstraintFlags |= 1
+}
+
+func (c *tableColumn) SetAutoincrementable() {
+	c.ConstraintFlags |= (1 << 1)
+}
+
+func (c *tableColumn) SetNullable() {
+	c.ConstraintFlags |= (1 << 2)
+}
+
+func (c *tableColumn) SetPrimaryKey() {
+	c.ConstraintFlags |= (1 << 3)
+}
+
+func (c *tableColumn) SetForeignKey() {
+	c.ConstraintFlags |= (1 << 4)
+}
+
+func (c tableColumn) HasDefaultValue() bool {
+	return (c.ConstraintFlags & 1) != 0
+}
+
+func (c tableColumn) IsAutoincrementable() bool {
+	return (c.ConstraintFlags & (1 << 1)) != 0
+}
+
+func (c tableColumn) IsNullable() bool {
+	return (c.ConstraintFlags & (1 << 2)) != 0
+}
+
+func (c tableColumn) IsPrimaryKey() bool {
+	return (c.ConstraintFlags & (1 << 3)) != 0
+}
+
+func (c tableColumn) IsForeignKey() bool {
+	return (c.ConstraintFlags & (1 << 4)) != 0
 }
 
 func (c tableColumn) ColumnName() string {
@@ -149,6 +207,13 @@ func (c tableColumn) ColumnName() string {
 
 func (c *tableColumn) SetColumnName(columnName string) {
 	copy(c.ColumnNameArray[:], strings.ToUpper(columnName))
+}
+
+func (c tableColumn) ColumnSize() int {
+	if c.DataType != char {
+		return dataTypeSizes[c.DataType]
+	}
+	return int(c.Size)
 }
 
 func (db Database) readHeaderBlock(blockAddr Address) (*tableHeaderBlock, error) {

@@ -10,9 +10,11 @@ import (
 )
 
 const (
-	databasesDirName  = "databases"
-	metadataBlockSize = 128
-	metadataFields    = 5
+	databasesDirName       = "databases"
+	countersTableName      = "$COUNTERS"
+	defaultValuesTableName = "$DEFAULT_VALUES"
+	metadataBlockSize      = 128
+	metadataFields         = 5
 )
 
 type Address uint32

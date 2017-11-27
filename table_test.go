@@ -100,8 +100,8 @@ func TestNewTable(t *testing.T) {
 	expectedTitleSize := uint16(32)
 
 	createCmd := common.NewCreateTableCommand("MOVIES", common.TableColumnDefiners{
-		common.NewIntegerTableColumn(expectedIDColumnName, nil, false, true),
-		common.NewCharTableColumn(expectedTitleColumnName, nil, false, false, expectedTitleSize),
+		common.NewIntegerTableColumn(expectedIDColumnName, nil, false, true, false, false),
+		common.NewCharTableColumn(expectedTitleColumnName, "TEST", false, false, false, false, expectedTitleSize),
 	})
 
 	db, err := NewDatabase(dbName)
@@ -193,21 +193,22 @@ func TestReadTable(t *testing.T) {
 	}
 
 	expectedMockRecordsCount := 3
-	mockRecords := [92]struct {
-		FreeFlag uint32
-		IDMovie  int64
-		Title    [32]byte
+	mockRecords := [78]struct {
+		FreeFlag   uint32
+		NullBitmap [nullBitmapSize]byte
+		IDMovie    int64
+		Title      [32]byte
 	}{
-		{0, 0, movieTitle("Lord of the Rings")},
-		{0, 1, movieTitle("Harry Potter")},
-		{0, 2, movieTitle("Avengers")},
+		{FreeFlag: 0, IDMovie: 0, Title: movieTitle("Lord of the Rings")},
+		{FreeFlag: 0, IDMovie: 1, Title: movieTitle("Harry Potter")},
+		{FreeFlag: 0, IDMovie: 2, Title: movieTitle("Avengers")},
 	}
-
-	for i := 3; i < 92; i++ {
+	for i := 3; i < 78; i++ {
 		mockRecords[i] = struct {
-			FreeFlag uint32
-			IDMovie  int64
-			Title    [32]byte
+			FreeFlag   uint32
+			NullBitmap [nullBitmapSize]byte
+			IDMovie    int64
+			Title      [32]byte
 		}{
 			FreeFlag: freeFlag,
 		}

@@ -1,6 +1,7 @@
 package data
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 
@@ -54,6 +55,7 @@ func (db *Database) NewTable(tableName string, columns common.TableColumnDefiner
 	}
 
 	tableHeaderBlock := &tableHeaderBlock{}
+	tableConstraintBlock := &tableConstraintBlock{}
 
 	for _, column := range columns {
 		tableColumn := tableColumn{
@@ -64,13 +66,72 @@ func (db *Database) NewTable(tableName string, columns common.TableColumnDefiner
 			tableColumn.Size = uint16(column.(common.CharTableColumn).Size())
 		}
 
-		tableColumn.SetColumnName(column.ColumnName())
+		if column.DefaultValue() != nil {
+			tableColumn.SetDefaultValue()
+		}
 
+		if column.Autoincrementable() {
+			tableColumn.SetAutoincrementable()
+		}
+
+		if column.Nullable() {
+			tableColumn.SetNullable()
+		}
+
+		if column.PrimaryKey() {
+			tableColumn.SetPrimaryKey()
+		}
+
+		if column.ForeignKey() {
+			tableColumn.SetForeignKey()
+		}
+
+		tableColumn.SetColumnName(column.ColumnName())
 		tableHeaderBlock.AddTableColumn(tableColumn)
 	}
 
 	if err := db.writeTableHeaderBlock(tableEntry.HeaderBlock, tableHeaderBlock); err != nil {
 		return nil, err
+	}
+
+	if err := db.writeTableConstraintBlock(tableEntry.ConstraintBlock, tableConstraintBlock); err != nil {
+		return nil, err
+	}
+
+	for i, column := range tableHeaderBlock.TableColumns() {
+		columnConstraint := columnConstraint{
+			ColumnIndex:      uint8(i + 1),
+			DataSize:         uint16(column.ColumnSize()),
+			Counter:          0,
+			DefaultValueData: make([]byte, column.ColumnSize()),
+		}
+
+		if column.HasDefaultValue() {
+			defaultValue := columns[i].DefaultValue()
+
+			switch column.DataType {
+			case datetime:
+				fallthrough
+			case integer:
+				binary.LittleEndian.PutUint64(columnConstraint.DefaultValueData, uint64(defaultValue.(int64)))
+			case float:
+				binary.LittleEndian.PutUint64(columnConstraint.DefaultValueData, uint64(defaultValue.(float64)))
+			case boolean:
+				var b byte
+				if defaultValue.(bool) {
+					b = 1
+				} else {
+					b = 0
+				}
+				columnConstraint.DefaultValueData[0] = b
+			case char:
+				copy(columnConstraint.DefaultValueData, defaultValue.(string))
+			}
+		}
+
+		if err := db.insertConstraint(tableEntry.ConstraintBlock, columnConstraint); err != nil {
+			return nil, err
+		}
 	}
 
 	return tableHeaderBlock.Table(tableName), nil

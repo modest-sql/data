@@ -3,7 +3,6 @@ package data
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"io"
 )
 
@@ -89,5 +88,33 @@ func (db *Database) allocBlock() (newAddr Address, err error) {
 }
 
 func (db *Database) freeBlock(blockAddr Address) error {
-	return errors.New("freeBlock not implemented")
+	block, err := db.readBlock(blockAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	if db.FirstFreeBlock == 0 {
+		db.BlockCount++
+		db.FirstFreeBlock = blockAddr
+		db.LastFreeBlock = blockAddr
+
+		if _, err := db.file.Seek(0, io.SeekEnd); err != nil {
+			return 0, err
+		}
+
+		if err := binary.Write(db.file, binary.LittleEndian, block{}); err != nil {
+			return 0, err
+		}
+	} else {
+		db.BlockCount++
+		if db.FirstFreeBlock == db.LastFreeBlock {
+			db.LastFreeBlock = blockAddr
+		}
+		db.LastFreeBlock = blockAddr
+	}
+
+	if err := db.writeMetadata(); err != nil {
+		return 0, err
+	}
+	return nil
 }
