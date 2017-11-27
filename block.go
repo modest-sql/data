@@ -3,20 +3,18 @@ package data
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"io"
 )
 
 type blockSignature uint32
 
 const (
-	blockSize                                    = 4096
-	rawBlockPadding                              = blockSize - 4*2
-	nullBlockAddr                 Address        = 0
-	tableEntryBlockSignature      blockSignature = 0xff77ff77
-	tableHeaderBlockSignature     blockSignature = 0xee11ee11
-	recordBlockSignature          blockSignature = 0xaa88aa88
-	tableConstraintBlockSignature blockSignature = 0xdd11cc47
+	blockSize                                = 4096
+	rawBlockPadding                          = blockSize - 4*2
+	nullBlockAddr             Address        = 0
+	tableEntryBlockSignature  blockSignature = 0xff77ff77
+	tableHeaderBlockSignature blockSignature = 0xee11ee11
+	recordBlockSignature      blockSignature = 0xaa88aa88
 )
 
 type block [blockSize]byte
@@ -90,5 +88,33 @@ func (db *Database) allocBlock() (newAddr Address, err error) {
 }
 
 func (db *Database) freeBlock(blockAddr Address) error {
-	return errors.New("freeBlock not implemented")
+	block, err := db.readBlock(blockAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	if db.FirstFreeBlock == 0 {
+		db.BlockCount++
+		db.FirstFreeBlock = blockAddr
+		db.LastFreeBlock = blockAddr
+
+		if _, err := db.file.Seek(0, io.SeekEnd); err != nil {
+			return 0, err
+		}
+
+		if err := binary.Write(db.file, binary.LittleEndian, block{}); err != nil {
+			return 0, err
+		}
+	} else {
+		db.BlockCount++
+		if db.FirstFreeBlock == db.LastFreeBlock {
+			db.LastFreeBlock = blockAddr
+		}
+		db.LastFreeBlock = blockAddr
+	}
+
+	if err := db.writeMetadata(); err != nil {
+		return 0, err
+	}
+	return nil
 }
