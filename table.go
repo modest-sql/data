@@ -12,7 +12,7 @@ type (
 	Float    float64
 	Datetime int64
 	Boolean  bool
-	Char     string
+	Char     []byte
 )
 
 func (i Integer) bytes() (bytes []byte) {
@@ -56,8 +56,12 @@ func (b Boolean) size() int {
 	return binary.Size(b)
 }
 
+func (c Char) String() string {
+	return string(c)
+}
+
 func (c Char) bytes() []byte {
-	return []byte(c)
+	return c
 }
 
 func (c Char) size() int {
@@ -65,7 +69,7 @@ func (c Char) size() int {
 }
 
 func newChar(length int) Char {
-	return Char(make([]byte, length))
+	return make([]byte, length)
 }
 
 func newTableRecord() record {

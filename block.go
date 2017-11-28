@@ -34,6 +34,7 @@ type recordBlock struct {
 
 type record struct {
 	Free  flag
+	Nulls bitmap
 	Tuple tuple
 }
 
@@ -58,11 +59,11 @@ func (f flag) size() int {
 }
 
 func (r record) size() int {
-	return r.Free.size() + r.Tuple.size()
+	return r.Free.size() + r.Nulls.size() + r.Tuple.size()
 }
 
 func (r record) bytes() []byte {
-	return append(r.Free.bytes(), r.Tuple.bytes()...)
+	return append(r.Free.bytes(), append(r.Nulls.bytes(), r.Tuple.bytes()...)...)
 }
 
 func (t tuple) size() (size int) {
@@ -110,7 +111,7 @@ func (rb recordBlock) size() (size int) {
 }
 
 func newRecord(t tuple) record {
-	return record{freeFlag, t}
+	return record{freeFlag, newBitmap(len(t)), t}
 }
 
 func (db Database) newRecordBlock(r record) (*recordBlock, error) {
@@ -122,12 +123,13 @@ func (db Database) newRecordBlock(r record) (*recordBlock, error) {
 		},
 	}
 
-	if (int(db.databaseInfo.BlockSize) - rb.size()) < recordSize {
-		return nil, errors.New("Tuple size is greater than record block size")
+	recordBlockSize := (int(db.databaseInfo.BlockSize) - rb.size())
+	if recordSize > recordBlockSize {
+		return nil, errors.New("Record size is greater than record block size")
 	}
 
-	tuplesPerBlock := int(db.databaseInfo.BlockSize) / recordSize
-	for i := 0; i < tuplesPerBlock; i++ {
+	recordsPerBlock := recordBlockSize / recordSize
+	for i := 0; i < recordsPerBlock; i++ {
 		rb.records = append(rb.records, r)
 	}
 
