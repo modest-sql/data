@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	nullBlock            address   = 0
 	recordBlockSignature signature = 0x4b25ad3b
 	freeFlag             flag      = 0x13f6b89f
 )
@@ -13,8 +14,6 @@ const (
 type flag uint32
 
 type signature uint32
-
-type tuple []storable
 
 type storable interface {
 	bytes() []byte
@@ -28,8 +27,8 @@ type block struct {
 
 type recordBlock struct {
 	block
-	full    flag
-	records []record
+	records    uint32
+	recordList []record
 }
 
 type record struct {
@@ -66,22 +65,6 @@ func (r record) bytes() []byte {
 	return append(r.Free.bytes(), append(r.Nulls.bytes(), r.Tuple.bytes()...)...)
 }
 
-func (t tuple) size() (size int) {
-	for _, storable := range t {
-		size += storable.size()
-	}
-
-	return size
-}
-
-func (t tuple) bytes() (bytes []byte) {
-	for _, storable := range t {
-		bytes = append(bytes, storable.bytes()...)
-	}
-
-	return bytes
-}
-
 func (b block) bytes() []byte {
 	return append(b.Signature.bytes(), b.NextBlock.bytes()...)
 }
@@ -91,9 +74,11 @@ func (b block) size() (size int) {
 }
 
 func (rb recordBlock) bytes() (bytes []byte) {
-	bytes = append(rb.block.bytes(), rb.full.bytes()...)
+	bytes = rb.block.bytes()
+	bytes = append(bytes, make([]byte, 4)...)
+	binary.LittleEndian.PutUint32(bytes[4:], rb.records)
 
-	for _, record := range rb.records {
+	for _, record := range rb.recordList {
 		bytes = append(bytes, record.bytes()...)
 	}
 
@@ -101,10 +86,11 @@ func (rb recordBlock) bytes() (bytes []byte) {
 }
 
 func (rb recordBlock) size() (size int) {
-	size = rb.block.size() + rb.full.size()
+	size = rb.block.size() + binary.Size(rb.records)
 
-	for _, record := range rb.records {
-		size += record.size()
+	recordsCount := len(rb.recordList)
+	if recordsCount > 0 {
+		size += recordsCount * rb.recordList[0].size()
 	}
 
 	return size
@@ -114,7 +100,44 @@ func newRecord(t tuple) record {
 	return record{freeFlag, newBitmap(len(t)), t}
 }
 
-func (db Database) newRecordBlock(r record) (*recordBlock, error) {
+func buildRecord(t tuple) record {
+	nulls := newBitmap(len(t))
+
+	for i, element := range t {
+		if element.isNull {
+			nulls.Set(uint(i))
+		}
+	}
+
+	return record{Nulls: nulls, Tuple: t}
+}
+
+func (rb *recordBlock) insert(t tuple) bool {
+	recordSize := rb.recordList[0].size()
+	recordsPerBlock := rb.size() / recordSize
+
+	if int(rb.records) >= recordsPerBlock {
+		return false
+	}
+
+	r := buildRecord(t)
+	if recordSize != r.size() {
+		panic("New record does not match record size in record block")
+	}
+
+	for i, record := range rb.recordList {
+		if record.Free == freeFlag {
+			rb.recordList[i] = r
+			rb.records++
+			return true
+		}
+	}
+
+	return false
+}
+
+func (db Database) newRecordBlock(t tuple) (*recordBlock, error) {
+	r := newRecord(t)
 	recordSize := r.size()
 
 	rb := &recordBlock{
@@ -130,8 +153,12 @@ func (db Database) newRecordBlock(r record) (*recordBlock, error) {
 
 	recordsPerBlock := recordBlockSize / recordSize
 	for i := 0; i < recordsPerBlock; i++ {
-		rb.records = append(rb.records, r)
+		rb.recordList = append(rb.recordList, r)
 	}
 
 	return rb, nil
+}
+
+func (db Database) allocBlock() (address, error) {
+	return 0, nil
 }

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/modest-sql/common"
 )
 
 const (
@@ -18,9 +20,9 @@ const (
 	//MaxBlockSize defines the maximum block size a Modest SQL database can have.
 	MaxBlockSize uint32 = 1048576
 	//MetadataAddress defines the address in which the database metadata is located.
-	MetadataAddress = 1
+	MetadataAddress address = 1
 	//MetaTableAddress defines the address in which the database metatable is located.
-	MetaTableAddress = 2
+	MetaTableAddress address = 2
 )
 
 type address uint32
@@ -230,10 +232,72 @@ func (db Database) init() error {
 		return err
 	}
 
-	metatables, err := db.newRecordBlock(newTableRecord())
+	metatables, err := db.newRecordBlock(newTableTuple(nil, nil, nil))
 	if err != nil {
 		return err
 	}
 
 	return db.writeAt(metatables, db.databaseInfo.MetaTable)
+}
+
+func (db Database) NewTable(name string, columns []common.TableColumnDefiner) (err error) {
+	columnsBlock, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	recordsBlock, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			return
+		}
+
+	}()
+
+	tableTuple := newTableTuple(name, columnsBlock, recordsBlock)
+
+	for recordBlockAddr := db.databaseInfo.MetaTable; recordBlockAddr != nullBlock; {
+		b, err := db.readAt(recordBlockAddr)
+		if err != nil {
+			return err
+		}
+
+		recordBlock := &recordBlock{}
+		fill(recordBlock, b)
+
+		if ok := recordBlock.insert(tableTuple); ok {
+			if err := db.writeAt(recordBlock, recordBlockAddr); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		recordBlockAddr = recordBlock.NextBlock
+	}
+
+	newRecordBlockAddr, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	newRecordBlock, err := db.newRecordBlock(tableTuple)
+	if err != nil {
+		return nil
+	}
+
+	if err := db.writeAt(newRecordBlock, newRecordBlockAddr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fill(data interface{}, b []byte) interface{} {
+	buffer := bytes.NewBuffer(b)
+	binary.Read(buffer, binary.LittleEndian, &data)
+	return data
 }

@@ -1,10 +1,20 @@
 package data
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 const (
 	maxAttributeNameLength = 60
 	maxCharLength          = 2000
+)
+
+const (
+	IntegerSize  = 8
+	FloatSize    = 8
+	DatetimeSize = 8
+	BooleanSize  = 1
 )
 
 type (
@@ -68,10 +78,24 @@ func (c Char) size() int {
 	return len(c)
 }
 
-func newChar(length int) Char {
-	return make([]byte, length)
+func newChar(str string, length int) Char {
+	if len(str) > length {
+		panic("String is greater than char size")
+	}
+
+	b := make([]byte, length)
+	copy(b, str)
+	return b
 }
 
-func newTableRecord() record {
-	return newRecord(tuple{newChar(maxAttributeNameLength), Integer(0), Integer(0)})
+func newTableTuple(name string, columns address, records address) tuple {
+	if len(name) > maxAttributeNameLength {
+		panic(fmt.Sprintf("Table name can't be greater than %d bytes", maxAttributeNameLength))
+	}
+
+	return tuple{
+		tupleElement{maxAttributeNameLength, false, newChar(name, maxAttributeNameLength)},
+		tupleElement{IntegerSize, false, Integer(columns)},
+		tupleElement{IntegerSize, false, Integer(records)},
+	}
 }
