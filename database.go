@@ -14,11 +14,13 @@ const (
 	//MagicBytes is used to identify a Modest SQL database file.
 	MagicBytes uint32 = 0x8709f625
 	//MinBlockSize defines the minimum block size a Modest SQL database can have.
-	MinBlockSize uint32 = 512
+	MinBlockSize uint32 = 4096
 	//MaxBlockSize defines the maximum block size a Modest SQL database can have.
 	MaxBlockSize uint32 = 1048576
 	//MetadataAddress defines the address in which the database metadata is located.
 	MetadataAddress = 1
+	//MetaTableAddress defines the address in which the database metatable is located.
+	MetaTableAddress = 2
 )
 
 type address uint32
@@ -76,11 +78,15 @@ func NewDatabase(path string, blockSize uint32) (db *Database, err error) {
 		databaseInfo: DatabaseInfo{
 			MagicBytes: MagicBytes,
 			BlockSize:  blockSize,
-			Blocks:     1,
+			Blocks:     2,
+			MetaTable:  MetaTableAddress,
 		},
 	}
 
-	if err := db.writeAt(db.databaseInfo, MetadataAddress); err != nil {
+	if err := db.init(); err != nil {
+		if err := os.Remove(path); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
 
@@ -160,24 +166,45 @@ func (addr address) fileOffset(blockSize int) int64 {
 	return (int64(addr) - 1) * int64(blockSize)
 }
 
-func (db Database) writeAt(data interface{}, addr address) error {
+func (i DatabaseInfo) bytes() (bytes []byte) {
+	bytes = make([]byte, 16)
+	binary.LittleEndian.PutUint32(bytes[:4], i.MagicBytes)
+	binary.LittleEndian.PutUint32(bytes[4:8], i.BlockSize)
+	binary.LittleEndian.PutUint32(bytes[8:12], i.Blocks)
+	binary.LittleEndian.PutUint32(bytes[12:16], i.FreeBlocks)
+	bytes = append(bytes, i.FirstFreeBlock.bytes()...)
+	bytes = append(bytes, i.LastFreeBlock.bytes()...)
+	bytes = append(bytes, i.MetaTable.bytes()...)
+	return bytes
+}
+
+func (i DatabaseInfo) size() int {
+	return 7 * 4
+}
+
+func (addr address) bytes() (bytes []byte) {
+	bytes = make([]byte, 4)
+	binary.LittleEndian.PutUint32(bytes, uint32(addr))
+	return bytes
+}
+
+func (addr address) size() int {
+	return binary.Size(addr)
+}
+
+func (db Database) writeAt(data storable, addr address) error {
 	db.rwMutex.Lock()
 	defer db.rwMutex.Unlock()
 
-	dataSize := binary.Size(data)
+	dataSize := data.size()
 	blockSize := int(db.databaseInfo.BlockSize)
 
 	if dataSize > blockSize {
 		return errors.New("Failed to write data because it exceeds block size")
 	}
 
-	buffer := bytes.NewBuffer(nil)
-	if err := binary.Write(buffer, binary.LittleEndian, data); err != nil {
-		return err
-	}
-	buffer.Write(make([]byte, blockSize-dataSize))
-
-	if _, err := db.file.WriteAt(buffer.Bytes(), addr.fileOffset(blockSize)); err != nil {
+	bytes := append(data.bytes(), make([]byte, blockSize-dataSize)...)
+	if _, err := db.file.WriteAt(bytes, addr.fileOffset(blockSize)); err != nil {
 		return err
 	}
 
@@ -196,4 +223,17 @@ func (db Database) readAt(addr address) (b []byte, err error) {
 	}
 
 	return b, nil
+}
+
+func (db Database) init() error {
+	if err := db.writeAt(db.databaseInfo, MetadataAddress); err != nil {
+		return err
+	}
+
+	metatables, err := db.newRecordBlock(newTableRecord())
+	if err != nil {
+		return err
+	}
+
+	return db.writeAt(metatables, db.databaseInfo.MetaTable)
 }

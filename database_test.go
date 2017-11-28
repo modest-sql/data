@@ -20,7 +20,7 @@ func TestNewDatabase(t *testing.T) {
 	var testDbPath string = tmpDbName()
 
 	t.Run("FileSize", func(t *testing.T) {
-		var expectedFileSize int64 = int64(testBlockSize)
+		var expectedFileSize int64 = 2 * int64(testBlockSize)
 
 		db, err := data.NewDatabase(testDbPath, testBlockSize)
 		if err != nil {
@@ -49,7 +49,8 @@ func TestNewDatabase(t *testing.T) {
 		expectedDbInfo := data.DatabaseInfo{
 			MagicBytes: data.MagicBytes,
 			BlockSize:  testBlockSize,
-			Blocks:     1,
+			Blocks:     2,
+			MetaTable:  data.MetaTableAddress,
 		}
 
 		db, err := data.NewDatabase(testDbPath, testBlockSize)
@@ -92,12 +93,12 @@ func TestNewDatabase(t *testing.T) {
 	})
 
 	t.Run("CorrectBlockSizes", func(t *testing.T) {
-		blockSizes := []uint32{data.MinBlockSize, 1024, data.MaxBlockSize}
+		blockSizes := []uint32{data.MinBlockSize, 8192, data.MaxBlockSize}
 
 		for _, blockSize := range blockSizes {
 			db, err := data.NewDatabase(testDbPath, blockSize)
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
 			db.Close()
 			os.Remove(testDbPath)
@@ -114,7 +115,7 @@ func TestLoadDatabase(t *testing.T) {
 		FreeBlocks:     1,
 		FirstFreeBlock: 4,
 		LastFreeBlock:  4,
-		MetaTable:      1,
+		MetaTable:      data.MetaTableAddress,
 	}
 
 	db, err := data.LoadDatabase(testDbPath)
