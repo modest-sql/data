@@ -3,6 +3,8 @@ package data
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/modest-sql/common"
 )
 
 const (
@@ -86,6 +88,10 @@ func newChar(str string, length int) Char {
 	b := make([]byte, length)
 	copy(b, str)
 	return b
+}
+
+func newTuple(columns []common.TableColumnDefiner) tuple {
+	return nil
 }
 
 func newTableTuple(name string, columns address, records address) tuple {

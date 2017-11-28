@@ -241,24 +241,40 @@ func (db Database) init() error {
 }
 
 func (db Database) NewTable(name string, columns []common.TableColumnDefiner) (err error) {
-	columnsBlock, err := db.allocBlock()
+	columnsBlockAddr, err := db.allocBlock()
 	if err != nil {
 		return err
 	}
 
-	recordsBlock, err := db.allocBlock()
+	recordsBlockAddr, err := db.allocBlock()
 	if err != nil {
 		return err
 	}
+
+	tableTuple := newTableTuple(name, columnsBlockAddr, recordsBlockAddr)
 
 	defer func() {
 		if err != nil {
 			return
 		}
 
-	}()
+		var columnBlock *columnBlock
+		var recordBlock *recordBlock
 
-	tableTuple := newTableTuple(name, columnsBlock, recordsBlock)
+		if columnBlock, err = db.newColumnBlock(columns); err != nil {
+			return
+		}
+
+		if recordBlock, err = db.newRecordBlock(newTuple(columns)); err != nil {
+			return
+		}
+
+		if err = db.writeAt(columnBlock, columnsBlockAddr); err != nil {
+			return
+		}
+
+		err = db.writeAt(recordBlock, recordsBlockAddr)
+	}()
 
 	for recordBlockAddr := db.databaseInfo.MetaTable; recordBlockAddr != nullBlock; {
 		b, err := db.readAt(recordBlockAddr)
