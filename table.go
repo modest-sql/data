@@ -10,6 +10,7 @@ import (
 const (
 	maxAttributeNameLength = 60
 	maxCharLength          = 2000
+	constraintsCount       = 5
 )
 
 const (
@@ -17,6 +18,14 @@ const (
 	FloatSize    = 8
 	DatetimeSize = 8
 	BooleanSize  = 1
+)
+
+const (
+	integerType uint16 = iota
+	floatType
+	datetimeType
+	booleanType
+	charType
 )
 
 const (
@@ -164,9 +173,75 @@ func (c Char) size() int {
 	return len(c)
 }
 
-func buildColumn(definition common.TableColumnDefiner) column {
-	c := column{}
+func dataTypeInfo(cd common.TableColumnDefiner) (dataType uint16, dataSize uint16, defaultValue storable) {
+	definerDefaultValue := cd.DefaultValue()
+	hasDefaultValue := definerDefaultValue != nil
 
+	switch v := cd.(type) {
+	case *common.IntegerTableColumn:
+		if hasDefaultValue {
+			defaultValue = Integer(definerDefaultValue.(int64))
+		}
+		return integerType, IntegerSize, defaultValue
+	case *common.FloatTableColumn:
+		if hasDefaultValue {
+			defaultValue = Float(definerDefaultValue.(int64))
+		}
+		return floatType, FloatSize, defaultValue
+	case *common.DatetimeTableColumn:
+		if hasDefaultValue {
+			defaultValue = Datetime(definerDefaultValue.(int64))
+		}
+		return datetimeType, DatetimeSize, defaultValue
+	case *common.BooleanTableColumn:
+		if hasDefaultValue {
+			defaultValue = Boolean(definerDefaultValue.(bool))
+		}
+		return booleanType, BooleanSize, defaultValue
+	case *common.CharTableColumn:
+		if hasDefaultValue {
+			defaultValue = newChar(definerDefaultValue.(string), int(v.Size()))
+		}
+		return charType, uint16(v.Size()), defaultValue
+	}
+
+	return dataType, dataSize, defaultValue
+}
+
+func buildColumn(definition common.TableColumnDefiner) column {
+	if len(definition.ColumnName()) == 0 {
+		panic("Column name can't be empty")
+	} else if len(definition.ColumnName()) > maxAttributeNameLength {
+		panic(fmt.Sprintf("Column name length can't be greater than %d bytes", maxAttributeNameLength))
+	}
+
+	c := column{constraints: newBitmap(constraintsCount)}
+	c.dataSize, c.dataType, c.defaultValue = dataTypeInfo(definition)
+	copy(c.name[:], definition.ColumnName())
+
+	if definition.Autoincrementable() {
+		c.constraints.Set(autoincrementFlag)
+	}
+
+	if definition.DefaultValue() != nil {
+		c.constraints.Set(defaultFlag)
+	}
+
+	if definition.ForeignKey() {
+		c.constraints.Set(foreignKeyFlag)
+	}
+
+	if definition.Nullable() {
+		c.constraints.Set(nullableFlag)
+	}
+
+	if definition.PrimaryKey() {
+		c.constraints.Set(primaryKeyFlag)
+	}
+
+	c.columnSize = uint16(c.size())
+
+	return c
 }
 
 func newChar(str string, length int) Char {
@@ -174,12 +249,18 @@ func newChar(str string, length int) Char {
 		panic("String length is greater than char size")
 	}
 
+	if length == 0 {
+		panic("Char length must be greater than 0")
+	} else if length > maxCharLength {
+		panic(fmt.Sprintf("Char length can't be greater than %d bytes", maxCharLength))
+	}
+
 	b := make([]byte, length)
 	copy(b, str)
 	return b
 }
 
-func newTuple(columns []common.TableColumnDefiner) tuple {
+func newTuple(columns []common.TableColumnDefiner) (t tuple) {
 	return nil
 }
 
