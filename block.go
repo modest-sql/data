@@ -161,8 +161,6 @@ func (db Database) newRecordBlock(t tuple) (*recordBlock, error) {
 }
 
 func (db Database) allocBlock() (newAddr address, err error) {
-	rawBlock := &block{}
-
 	if db.databaseInfo.FirstFreeBlock == 0 {
 		db.databaseInfo.Blocks++
 		newAddr = address(db.databaseInfo.Blocks)
@@ -181,6 +179,7 @@ func (db Database) allocBlock() (newAddr address, err error) {
 		if err != nil {
 			return 0, err
 		}
+		rawBlock := &block{}
 		fill(rawBlock, b)
 
 		if db.databaseInfo.LastFreeBlock == db.databaseInfo.FirstFreeBlock {
@@ -190,7 +189,7 @@ func (db Database) allocBlock() (newAddr address, err error) {
 		db.databaseInfo.FirstFreeBlock = rawBlock.NextBlock
 	}
 
-	if err := db.writeAt(rawBlock, db.databaseInfo.MetaTable); err != nil {
+	if err := db.writeAt(db.databaseInfo, MetadataAddress); err != nil {
 		return 0, err
 	}
 
