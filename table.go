@@ -19,6 +19,14 @@ const (
 	BooleanSize  = 1
 )
 
+const (
+	defaultFlag = iota
+	autoincrementFlag
+	nullableFlag
+	primaryKeyFlag
+	foreignKeyFlag
+)
+
 type (
 	Integer  int64
 	Float    float64
@@ -27,6 +35,82 @@ type (
 	Char     []byte
 )
 
+type columnBlock struct {
+	block
+	columns []column
+}
+
+type column struct {
+	columnSize   uint16
+	name         [maxAttributeNameLength]byte
+	dataType     uint16
+	dataSize     uint16
+	counter      uint32
+	constraints  bitmap
+	defaultValue storable
+}
+
+func (c column) IsNullable() bool {
+	return c.constraints.At(nullableFlag)
+}
+
+func (c column) Autoincrementable() bool {
+	return c.constraints.At(autoincrementFlag)
+}
+
+func (c column) HasDefaultValue() bool {
+	return c.constraints.At(defaultFlag)
+}
+
+func (c column) IsPrimaryKey() bool {
+	return c.constraints.At(primaryKeyFlag)
+}
+
+func (c column) IsForeignKey() bool {
+	return c.constraints.At(foreignKeyFlag)
+}
+
+func (cb columnBlock) bytes() (bytes []byte) {
+	bytes = cb.block.bytes()
+
+	for _, column := range cb.columns {
+		bytes = append(bytes, column.bytes()...)
+	}
+
+	return bytes
+}
+
+func (cb columnBlock) size() (size int) {
+	size = cb.block.size()
+
+	for _, column := range cb.columns {
+		size += column.size()
+	}
+
+	return size
+}
+
+func (c column) bytes() (bytes []byte) {
+	bytes = make([]byte, 4)
+	binary.LittleEndian.PutUint16(bytes[:4], c.columnSize)
+
+	bytes = append(bytes, c.name[:]...)
+
+	tmp := make([]byte, 8)
+	binary.LittleEndian.PutUint16(tmp[:2], c.dataType)
+	binary.LittleEndian.PutUint16(tmp[2:4], c.dataSize)
+	binary.LittleEndian.PutUint32(tmp[4:], c.counter)
+	bytes = append(bytes, tmp...)
+
+	bytes = append(bytes, c.constraints.bytes()...)
+	bytes = append(bytes, c.defaultValue.bytes()...)
+	return bytes
+}
+
+func (c column) size() int {
+	return 3*2 + 4 + maxAttributeNameLength + c.constraints.size() + c.defaultValue.size()
+}
+
 func (i Integer) bytes() (bytes []byte) {
 	bytes = make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, uint64(i))
@@ -34,7 +118,7 @@ func (i Integer) bytes() (bytes []byte) {
 }
 
 func (i Integer) size() int {
-	return binary.Size(i)
+	return IntegerSize
 }
 
 func (f Float) bytes() (bytes []byte) {
@@ -44,7 +128,7 @@ func (f Float) bytes() (bytes []byte) {
 }
 
 func (f Float) size() int {
-	return binary.Size(f)
+	return FloatSize
 }
 
 func (d Datetime) bytes() (bytes []byte) {
@@ -54,7 +138,7 @@ func (d Datetime) bytes() (bytes []byte) {
 }
 
 func (d Datetime) size() int {
-	return binary.Size(d)
+	return DatetimeSize
 }
 
 func (b Boolean) bytes() []byte {
@@ -65,7 +149,7 @@ func (b Boolean) bytes() []byte {
 }
 
 func (b Boolean) size() int {
-	return binary.Size(b)
+	return BooleanSize
 }
 
 func (c Char) String() string {
@@ -80,9 +164,14 @@ func (c Char) size() int {
 	return len(c)
 }
 
+func buildColumn(definition common.TableColumnDefiner) column {
+	c := column{}
+
+}
+
 func newChar(str string, length int) Char {
 	if len(str) > length {
-		panic("String is greater than char size")
+		panic("String length is greater than char size")
 	}
 
 	b := make([]byte, length)
@@ -96,7 +185,7 @@ func newTuple(columns []common.TableColumnDefiner) tuple {
 
 func newTableTuple(name string, columns address, records address) tuple {
 	if len(name) > maxAttributeNameLength {
-		panic(fmt.Sprintf("Table name can't be greater than %d bytes", maxAttributeNameLength))
+		panic(fmt.Sprintf("Table name length can't be greater than %d bytes", maxAttributeNameLength))
 	}
 
 	return tuple{

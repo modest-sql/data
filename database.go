@@ -232,7 +232,7 @@ func (db Database) init() error {
 		return err
 	}
 
-	metatables, err := db.newRecordBlock(newTableTuple(nil, nil, nil))
+	metatables, err := db.newRecordBlock(newTableTuple("", 0, 0))
 	if err != nil {
 		return err
 	}
@@ -312,8 +312,12 @@ func (db Database) NewTable(name string, columns []common.TableColumnDefiner) (e
 	return nil
 }
 
+func (db Database) Insert(tableName string, values map[string]storable) error {
+	return errors.New("Not implemented")
+}
+
 func fill(data interface{}, b []byte) interface{} {
 	buffer := bytes.NewBuffer(b)
-	binary.Read(buffer, binary.LittleEndian, &data)
+	binary.Read(buffer, binary.LittleEndian, data)
 	return data
 }
