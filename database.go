@@ -313,11 +313,100 @@ func (db Database) NewTable(name string, columns []common.TableColumnDefiner) (e
 }
 
 func (db Database) Insert(tableName string, values map[string]storable) error {
-	return errors.New("Not implemented")
+	var tableTuple tuple
+	var recordBlock *recordBlock
+	var recordBlockAddr address
+
+	for recordBlockAddr = db.databaseInfo.MetaTable; tableTuple == nil && recordBlockAddr != nullBlock; {
+		if err := db.readBlock(recordBlockAddr, recordBlock); err != nil {
+			return err
+		}
+
+		var tablName string
+		for i := 0; i < int(recordBlock.records); i++ {
+			tablName = string(recordBlock.recordList[i].Tuple[0].bytes())
+			if tableName == tablName {
+				tableTuple = recordBlock.recordList[i].Tuple
+				break
+			}
+		}
+		recordBlockAddr = recordBlock.NextBlock
+	}
+
+	if tableTuple == nil {
+		return fmt.Errorf("table `%v` not found", tableName)
+	}
+
+	var columnsBlockAddr = tableTuple[1].value.(address)
+	var recordsBlockAddr = tableTuple[2].value.(address)
+
+	var columnBlock *columnBlock
+	if err := db.readBlock(columnsBlockAddr, columnBlock); err != nil {
+		return err
+	}
+
+	if err := db.validateConstraints(columnBlock.columns, values); err != nil {
+		return err
+	}
+
+	tuple := make([]tupleElement, len(columnBlock.columns))
+	for i, column := range columnBlock.columns {
+		if value, ok := values[string(column.name[:])]; ok {
+			tuple[i] = tupleElement{int(column.dataSize), false, value}
+		} else {
+			tuple[i] = tupleElement{int(column.dataSize), true, nil}
+		}
+	}
+
+	for recordBlockAddr = recordsBlockAddr; ; {
+		if err := db.readBlock(recordBlockAddr, recordBlock); err != nil {
+			return err
+		}
+
+		if ok := recordBlock.insert(tableTuple); ok {
+			if err := db.writeAt(recordBlock, recordBlockAddr); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		if recordBlock.NextBlock == nullBlock {
+			break
+		}
+
+		recordBlockAddr = recordBlock.NextBlock
+	}
+
+	newRecordBlockAddr, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	newRecordBlock, err := db.newRecordBlock(tuple)
+	if err != nil {
+		return nil
+	}
+
+	if err := db.writeAt(newRecordBlock, newRecordBlockAddr); err != nil {
+		return err
+	}
+
+	recordBlock.NextBlock = newRecordBlockAddr
+	return db.writeAt(recordBlock, recordBlockAddr)
 }
 
 func fill(data interface{}, b []byte) interface{} {
 	buffer := bytes.NewBuffer(b)
 	binary.Read(buffer, binary.LittleEndian, data)
 	return data
+}
+
+func (db Database) readBlock(blockAddr address, block interface{}) error {
+	b, err := db.readAt(blockAddr)
+	if err != nil {
+		return err
+	}
+
+	buffer := bytes.NewBuffer(b)
+	return binary.Read(buffer, binary.LittleEndian, block)
 }
