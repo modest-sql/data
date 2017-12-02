@@ -96,8 +96,8 @@ func (rb recordBlock) size() (size int) {
 	return size
 }
 
-func newRecord(t tuple) record {
-	return record{freeFlag, newBitmap(len(t)), t}
+func newRecord(columns []column) record {
+	return record{freeFlag, newBitmap(len(columns)), newTuple(columns)}
 }
 
 func buildRecord(t tuple) record {
@@ -136,8 +136,8 @@ func (rb *recordBlock) insert(t tuple) bool {
 	return false
 }
 
-func (db Database) newRecordBlock(t tuple) (*recordBlock, error) {
-	r := newRecord(t)
+func (db Database) newRecordBlock(columns []column) (*recordBlock, error) {
+	r := newRecord(columns)
 	recordSize := r.size()
 
 	rb := &recordBlock{

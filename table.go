@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	maxAttributeNameLength = 60
-	maxCharLength          = 2000
-	constraintsCount       = 5
+	maxAttributeNameLength           = 60
+	maxCharLength                    = 2000
+	constraintsCount                 = 5
+	columnBlockSignature   signature = 0xdbfe9f24
 )
 
 const (
@@ -29,7 +30,7 @@ const (
 )
 
 const (
-	defaultFlag = iota
+	defaultFlag uint = iota
 	autoincrementFlag
 	nullableFlag
 	primaryKeyFlag
@@ -57,6 +58,13 @@ type column struct {
 	counter      uint32
 	constraints  bitmap
 	defaultValue storable
+}
+
+var dataTypeSizes = map[uint16]int{
+	integerType:  IntegerSize,
+	floatType:    FloatSize,
+	datetimeType: DatetimeSize,
+	booleanType:  BooleanSize,
 }
 
 func (c column) IsNullable() bool {
@@ -117,7 +125,7 @@ func (c column) bytes() (bytes []byte) {
 }
 
 func (c column) size() int {
-	return 3*2 + 4 + maxAttributeNameLength + c.constraints.size() + c.defaultValue.size()
+	return 3*2 + 4 + maxAttributeNameLength + c.constraints.size() + int(c.dataSize)
 }
 
 func (i Integer) bytes() (bytes []byte) {
@@ -178,34 +186,60 @@ func dataTypeInfo(cd common.TableColumnDefiner) (dataType uint16, dataSize uint1
 	hasDefaultValue := definerDefaultValue != nil
 
 	switch v := cd.(type) {
-	case *common.IntegerTableColumn:
+	case common.IntegerTableColumn:
 		if hasDefaultValue {
 			defaultValue = Integer(definerDefaultValue.(int64))
+		} else {
+			defaultValue = Integer(0)
 		}
 		return integerType, IntegerSize, defaultValue
-	case *common.FloatTableColumn:
+	case common.FloatTableColumn:
 		if hasDefaultValue {
 			defaultValue = Float(definerDefaultValue.(int64))
+		} else {
+			defaultValue = Float(0)
 		}
 		return floatType, FloatSize, defaultValue
-	case *common.DatetimeTableColumn:
+	case common.DatetimeTableColumn:
 		if hasDefaultValue {
 			defaultValue = Datetime(definerDefaultValue.(int64))
+		} else {
+			defaultValue = Datetime(0)
 		}
 		return datetimeType, DatetimeSize, defaultValue
-	case *common.BooleanTableColumn:
+	case common.BooleanTableColumn:
 		if hasDefaultValue {
 			defaultValue = Boolean(definerDefaultValue.(bool))
+		} else {
+			defaultValue = Boolean(false)
 		}
 		return booleanType, BooleanSize, defaultValue
-	case *common.CharTableColumn:
+	case common.CharTableColumn:
 		if hasDefaultValue {
 			defaultValue = newChar(definerDefaultValue.(string), int(v.Size()))
+		} else {
+			defaultValue = newChar("", int(v.Size()))
 		}
 		return charType, uint16(v.Size()), defaultValue
 	}
 
 	return dataType, dataSize, defaultValue
+}
+
+func newChar(str string, length int) Char {
+	if len(str) > length {
+		panic("String length is greater than char size")
+	}
+
+	if length == 0 {
+		panic("Char length must be greater than 0")
+	} else if length > maxCharLength {
+		panic(fmt.Sprintf("Char length can't be greater than %d bytes", maxCharLength))
+	}
+
+	b := make([]byte, length)
+	copy(b, str)
+	return b
 }
 
 func buildColumn(definition common.TableColumnDefiner) column {
@@ -244,24 +278,21 @@ func buildColumn(definition common.TableColumnDefiner) column {
 	return c
 }
 
-func newChar(str string, length int) Char {
-	if len(str) > length {
-		panic("String length is greater than char size")
+func (db Database) newColumnBlock(columns []column) *columnBlock {
+	return &columnBlock{
+		block: block{
+			Signature: columnBlockSignature,
+		},
+		columns: columns,
 	}
-
-	if length == 0 {
-		panic("Char length must be greater than 0")
-	} else if length > maxCharLength {
-		panic(fmt.Sprintf("Char length can't be greater than %d bytes", maxCharLength))
-	}
-
-	b := make([]byte, length)
-	copy(b, str)
-	return b
 }
 
-func newTuple(columns []common.TableColumnDefiner) (t tuple) {
-	return nil
+func newTuple(columns []column) (t tuple) {
+	for _, column := range columns {
+		t = append(t, tupleElement{defaultSize: int(column.dataSize), isNull: true})
+	}
+
+	return t
 }
 
 func newTableTuple(name string, columns address, records address) tuple {

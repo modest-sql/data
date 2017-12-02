@@ -92,6 +92,15 @@ func NewDatabase(path string, blockSize uint32) (db *Database, err error) {
 		return nil, err
 	}
 
+	columns := []common.TableColumnDefiner{
+		common.NewIntegerTableColumn("ID", nil, false, false, true, false),
+		common.NewCharTableColumn("TITLE", nil, false, false, false, false, 32),
+	}
+
+	if err := db.NewTable("MOVIES", columns); err != nil {
+		return nil, err
+	}
+
 	databases.Store(file.Name(), db)
 
 	return db, nil
@@ -232,15 +241,31 @@ func (db Database) init() error {
 		return err
 	}
 
-	metatables, err := db.newRecordBlock(newTableTuple("", 0, 0))
+	metaTablesDefinitions := []common.TableColumnDefiner{
+		common.NewCharTableColumn("TABLES", nil, false, false, true, false, maxAttributeNameLength),
+		common.NewIntegerTableColumn("COLUMNS", nil, false, false, false, false),
+		common.NewIntegerTableColumn("RECORDS", nil, false, false, false, false),
+	}
+
+	columns := []column{}
+	for _, definition := range metaTablesDefinitions {
+		columns = append(columns, buildColumn(definition))
+	}
+
+	metaTables, err := db.newRecordBlock(columns)
 	if err != nil {
 		return err
 	}
 
-	return db.writeAt(metatables, db.databaseInfo.MetaTable)
+	return db.writeAt(metaTables, db.databaseInfo.MetaTable)
 }
 
-func (db Database) NewTable(name string, columns []common.TableColumnDefiner) (err error) {
+func (db Database) NewTable(name string, definitions []common.TableColumnDefiner) (err error) {
+	columns := []column{}
+	for _, definition := range definitions {
+		columns = append(columns, buildColumn(definition))
+	}
+
 	columnsBlockAddr, err := db.allocBlock()
 	if err != nil {
 		return err
@@ -261,11 +286,11 @@ func (db Database) NewTable(name string, columns []common.TableColumnDefiner) (e
 		var columnBlock *columnBlock
 		var recordBlock *recordBlock
 
-		if columnBlock, err = db.newColumnBlock(columns); err != nil {
+		if columnBlock = db.newColumnBlock(columns); err != nil {
 			return
 		}
 
-		if recordBlock, err = db.newRecordBlock(newTuple(columns)); err != nil {
+		if recordBlock, err = db.newRecordBlock(columns); err != nil {
 			return
 		}
 
@@ -300,7 +325,7 @@ func (db Database) NewTable(name string, columns []common.TableColumnDefiner) (e
 		return err
 	}
 
-	newRecordBlock, err := db.newRecordBlock(tableTuple)
+	newRecordBlock, err := db.newRecordBlock(columns)
 	if err != nil {
 		return nil
 	}

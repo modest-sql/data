@@ -2,24 +2,28 @@ package data
 
 type bitmap []byte
 
-func newBitmap(size int) bitmap {
-	if size <= 0 {
+func newBitmap(length int) bitmap {
+	if length <= 0 {
 		return []byte{}
 	}
 
-	return make([]byte, ((size-1)/8)+1)
+	return make([]byte, ((length-1)/8)+1)
 }
 
 func (bm bitmap) At(i uint) bool {
-	return (bm[int(i)/len(bm)] & (1 << (i % uint(len(bm))))) != 0
+	return (bm[int(i)/bm.length()] & (1 << (i % uint(bm.length())))) != 0
 }
 
 func (bm *bitmap) Set(i uint) {
-	(*bm)[int(i)/len(*bm)] |= (1 << (i % uint(len(*bm))))
+	(*bm)[int(i)/bm.length()] |= (1 << (i % uint(bm.length())))
 }
 
 func (bm *bitmap) Clear(i uint) {
-	(*bm)[int(i)/len(*bm)] &^= (1 << (i % uint(len(*bm))))
+	(*bm)[int(i)/bm.length()] &^= (1 << (i % uint(bm.length())))
+}
+
+func (bm bitmap) length() int {
+	return len(bm) * 8
 }
 
 func (bm bitmap) bytes() []byte {
