@@ -169,7 +169,7 @@ func (db Database) allocBlock() (newAddr address, err error) {
 			return 0, err
 		}
 
-		if err := binary.Write(db.file, binary.LittleEndian, block{}); err != nil {
+		if err := binary.Write(db.file, binary.LittleEndian, make([]byte, db.databaseInfo.BlockSize)); err != nil {
 			return 0, err
 		}
 	} else {
