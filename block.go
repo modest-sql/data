@@ -3,6 +3,7 @@ package data
 import (
 	"encoding/binary"
 	"errors"
+	"io"
 )
 
 const (
@@ -159,6 +160,38 @@ func (db Database) newRecordBlock(t tuple) (*recordBlock, error) {
 	return rb, nil
 }
 
-func (db Database) allocBlock() (address, error) {
-	return 0, nil
+func (db Database) allocBlock() (newAddr address, err error) {
+	if db.databaseInfo.FirstFreeBlock == 0 {
+		db.databaseInfo.Blocks++
+		newAddr = address(db.databaseInfo.Blocks)
+
+		if _, err := db.file.Seek(0, io.SeekEnd); err != nil {
+			return 0, err
+		}
+
+		if err := binary.Write(db.file, binary.LittleEndian, make([]byte, db.databaseInfo.BlockSize)); err != nil {
+			return 0, err
+		}
+	} else {
+		newAddr = db.databaseInfo.FirstFreeBlock
+
+		b, err := db.readAt(db.databaseInfo.FirstFreeBlock)
+		if err != nil {
+			return 0, err
+		}
+		rawBlock := &block{}
+		fill(rawBlock, b)
+
+		if db.databaseInfo.LastFreeBlock == db.databaseInfo.FirstFreeBlock {
+			db.databaseInfo.LastFreeBlock = rawBlock.NextBlock
+		}
+
+		db.databaseInfo.FirstFreeBlock = rawBlock.NextBlock
+	}
+
+	if err := db.writeAt(db.databaseInfo, MetadataAddress); err != nil {
+		return 0, err
+	}
+
+	return newAddr, nil
 }
