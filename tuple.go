@@ -39,3 +39,11 @@ func (i tupleElement) bytes() []byte {
 
 	return i.value.bytes()
 }
+
+func newTuple(columns []column) (t tuple) {
+	for _, column := range columns {
+		t = append(t, tupleElement{defaultSize: int(column.dataSize), isNull: true})
+	}
+
+	return t
+}

@@ -92,15 +92,6 @@ func NewDatabase(path string, blockSize uint32) (db *Database, err error) {
 		return nil, err
 	}
 
-	columns := []common.TableColumnDefiner{
-		common.NewIntegerTableColumn("ID", nil, false, false, true, false),
-		common.NewCharTableColumn("TITLE", nil, false, false, false, false, 32),
-	}
-
-	if err := db.NewTable("MOVIES", columns); err != nil {
-		return nil, err
-	}
-
 	databases.Store(file.Name(), db)
 
 	return db, nil
@@ -252,20 +243,10 @@ func (db Database) init() error {
 		columns = append(columns, buildColumn(definition))
 	}
 
-	metaTables, err := db.newRecordBlock(columns)
-	if err != nil {
-		return err
-	}
-
-	return db.writeAt(metaTables, db.databaseInfo.MetaTable)
+	return db.writeAt(db.newRecordBlock(columns), db.databaseInfo.MetaTable)
 }
 
-func (db Database) NewTable(name string, definitions []common.TableColumnDefiner) (err error) {
-	columns := []column{}
-	for _, definition := range definitions {
-		columns = append(columns, buildColumn(definition))
-	}
-
+func (db *Database) NewTable(name string, definitions []common.TableColumnDefiner) (err error) {
 	columnsBlockAddr, err := db.allocBlock()
 	if err != nil {
 		return err
@@ -283,32 +264,34 @@ func (db Database) NewTable(name string, definitions []common.TableColumnDefiner
 			return
 		}
 
-		var columnBlock *columnBlock
-		var recordBlock *recordBlock
+		columns := []column{}
+		for _, definition := range definitions {
+			columns = append(columns, buildColumn(definition))
+		}
 
-		if columnBlock = db.newColumnBlock(columns); err != nil {
+		if err = db.writeAt(db.newColumnBlock(columns), columnsBlockAddr); err != nil {
 			return
 		}
 
-		if recordBlock, err = db.newRecordBlock(columns); err != nil {
-			return
-		}
-
-		if err = db.writeAt(columnBlock, columnsBlockAddr); err != nil {
-			return
-		}
-
-		err = db.writeAt(recordBlock, recordsBlockAddr)
+		err = db.writeAt(db.newRecordBlock(columns), recordsBlockAddr)
 	}()
 
+	metaTablesDefinitions := []common.TableColumnDefiner{
+		common.NewCharTableColumn("TABLES", nil, false, false, true, false, maxAttributeNameLength),
+		common.NewIntegerTableColumn("COLUMNS", nil, false, false, false, false),
+		common.NewIntegerTableColumn("RECORDS", nil, false, false, false, false),
+	}
+
+	columns := []column{}
+	for _, definition := range metaTablesDefinitions {
+		columns = append(columns, buildColumn(definition))
+	}
+
 	for recordBlockAddr := db.databaseInfo.MetaTable; recordBlockAddr != nullBlock; {
-		b, err := db.readAt(recordBlockAddr)
+		recordBlock, err := db.readRecordBlockAt(columns, recordBlockAddr)
 		if err != nil {
 			return err
 		}
-
-		recordBlock := &recordBlock{}
-		fill(recordBlock, b)
 
 		if ok := recordBlock.insert(tableTuple); ok {
 			if err := db.writeAt(recordBlock, recordBlockAddr); err != nil {
@@ -325,12 +308,7 @@ func (db Database) NewTable(name string, definitions []common.TableColumnDefiner
 		return err
 	}
 
-	newRecordBlock, err := db.newRecordBlock(columns)
-	if err != nil {
-		return nil
-	}
-
-	if err := db.writeAt(newRecordBlock, newRecordBlockAddr); err != nil {
+	if err := db.writeAt(db.newRecordBlock(columns), newRecordBlockAddr); err != nil {
 		return err
 	}
 
@@ -339,10 +317,4 @@ func (db Database) NewTable(name string, definitions []common.TableColumnDefiner
 
 func (db Database) Insert(tableName string, values map[string]storable) error {
 	return errors.New("Not implemented")
-}
-
-func fill(data interface{}, b []byte) interface{} {
-	buffer := bytes.NewBuffer(b)
-	binary.Read(buffer, binary.LittleEndian, data)
-	return data
 }

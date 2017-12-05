@@ -250,7 +250,7 @@ func buildColumn(definition common.TableColumnDefiner) column {
 	}
 
 	c := column{constraints: newBitmap(constraintsCount)}
-	c.dataSize, c.dataType, c.defaultValue = dataTypeInfo(definition)
+	c.dataType, c.dataSize, c.defaultValue = dataTypeInfo(definition)
 	copy(c.name[:], definition.ColumnName())
 
 	if definition.Autoincrementable() {
@@ -285,14 +285,6 @@ func (db Database) newColumnBlock(columns []column) *columnBlock {
 		},
 		columns: columns,
 	}
-}
-
-func newTuple(columns []column) (t tuple) {
-	for _, column := range columns {
-		t = append(t, tupleElement{defaultSize: int(column.dataSize), isNull: true})
-	}
-
-	return t
 }
 
 func newTableTuple(name string, columns address, records address) tuple {
