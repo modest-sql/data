@@ -19,6 +19,10 @@ type dbColumn struct {
 	dbConstraints              dbConstraintType
 }
 
+func (dc dbColumn) name() string {
+	return string(dc.dbColumnName)
+}
+
 func (dc dbColumn) hasConstraint(constraint dbConstraintType) bool {
 	return (dc.dbConstraints & constraint) != 0
 }
