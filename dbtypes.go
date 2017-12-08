@@ -10,7 +10,7 @@ const (
 	dbCharTypeID
 )
 
-type dbDataType interface {
+type dbType interface {
 	dbTypeID() dbTypeID
 }
 
