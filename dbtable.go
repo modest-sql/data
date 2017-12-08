@@ -70,3 +70,26 @@ func (t *dbTable) deleteColumn(name string) error {
 
 	return fmt.Errorf("Table `%s' does not contain column with ID %d", t.name(), dbColumnID)
 }
+
+func (t dbTable) newDBTuple() (tuple dbTuple) {
+	tuple = dbTuple{}
+
+	for i := range t.dbColumns {
+		tuple[t.dbColumns[i].name()] = nil
+	}
+
+	return tuple
+}
+
+func (t dbTable) newDBRecord() (record dbRecord) {
+	nulls := newBitmap(len(t.dbColumns))
+	for i := range nulls {
+		nulls[i] = ^byte(0)
+	}
+
+	return dbRecord{
+		freeFlag: freeFlag,
+		nulls:    nulls,
+		dbTuple:  t.newDBTuple(),
+	}
+}

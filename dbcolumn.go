@@ -23,6 +23,7 @@ var dbConstraintTypeNames = map[dbConstraintType]string{
 type dbColumn struct {
 	dbTableID                  dbInteger
 	dbColumnID                 dbInteger
+	dbColumnPosition           dbInteger
 	dbTypeID                   dbTypeID
 	dbColumnName               dbChar
 	dbAutoincrementCounter     dbInteger
