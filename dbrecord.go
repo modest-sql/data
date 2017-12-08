@@ -1,9 +1,8 @@
 package data
 
-import "fmt"
-
 const (
-	freeFlag uint32 = 0x3314b318
+	freeFlag     uint32 = 0x3314b318
+	freeFlagSize        = 4
 )
 
 type dbRecord struct {
@@ -20,31 +19,20 @@ func (r dbRecord) columnIsNull(dbColumn dbColumn) bool {
 	return r.isFree() || r.nulls.At(uint(dbColumn.dbColumnPosition))
 }
 
-func (r dbRecord) columnValue(dbColumn dbColumn) (dbType, error) {
+func (r dbRecord) columnValue(dbColumn dbColumn) dbType {
 	if r.columnIsNull(dbColumn) {
-		return nil, nil
+		return nil
 	}
 
-	value, ok := r.dbTuple[dbColumn.name()]
-	if !ok {
-		return nil, fmt.Errorf("Tuple has no element with name `%s'", dbColumn.name())
-	}
-
-	return value, nil
+	return r.dbTuple[dbColumn.name()]
 }
 
-func (r *dbRecord) insertColumnValue(value dbType, dbColumn dbColumn) error {
-	if _, ok := r.dbTuple[dbColumn.name()]; !ok {
-		return fmt.Errorf("Tuple has no element with name `%s'", dbColumn.name())
-	}
-
+func (r *dbRecord) insertColumnValue(value dbType, dbColumn dbColumn) {
 	if value == nil {
 		r.nulls.Set(uint(dbColumn.dbColumnPosition))
 	} else {
 		r.nulls.Clear(uint(dbColumn.dbColumnPosition))
 	}
 
-	r.dbTuple[dbColumn.name()] = nil
-
-	return nil
+	r.dbTuple[dbColumn.name()] = value
 }

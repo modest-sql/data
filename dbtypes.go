@@ -1,5 +1,7 @@
 package data
 
+import "encoding/binary"
+
 type dbTypeID uint8
 
 const (
@@ -20,6 +22,7 @@ const (
 type dbType interface {
 	dbTypeID() dbTypeID
 	dbTypeSize() int
+	bytes() []byte
 }
 
 type dbInteger int64
@@ -32,6 +35,12 @@ func (dt dbInteger) dbTypeSize() int {
 	return dbIntegerSize
 }
 
+func (dt dbInteger) bytes() []byte {
+	b := make([]byte, dbIntegerSize)
+	binary.LittleEndian.PutUint64(b, uint64(dt))
+	return b
+}
+
 type dbFloat float64
 
 func (dt dbFloat) dbTypeID() dbTypeID {
@@ -40,6 +49,12 @@ func (dt dbFloat) dbTypeID() dbTypeID {
 
 func (dt dbFloat) dbTypeSize() int {
 	return dbFloatSize
+}
+
+func (dt dbFloat) bytes() []byte {
+	b := make([]byte, dbFloatSize)
+	binary.LittleEndian.PutUint64(b, uint64(dt))
+	return b
 }
 
 type dbDateTime int64
@@ -52,6 +67,12 @@ func (dt dbDateTime) dbTypeSize() int {
 	return dbDateTimeSize
 }
 
+func (dt dbDateTime) bytes() []byte {
+	b := make([]byte, dbDateTimeSize)
+	binary.LittleEndian.PutUint64(b, uint64(dt))
+	return b
+}
+
 type dbBoolean bool
 
 func (dt dbBoolean) dbTypeID() dbTypeID {
@@ -62,6 +83,13 @@ func (dt dbBoolean) dbTypeSize() int {
 	return dbBooleanSize
 }
 
+func (dt dbBoolean) bytes() []byte {
+	if dt {
+		return []byte{1}
+	}
+	return []byte{0}
+}
+
 type dbChar []byte
 
 func (dt dbChar) dbTypeID() dbTypeID {
@@ -70,6 +98,10 @@ func (dt dbChar) dbTypeID() dbTypeID {
 
 func (dt dbChar) dbTypeSize() int {
 	return len(dt)
+}
+
+func (dt dbChar) bytes() []byte {
+	return dt
 }
 
 func (dt dbChar) equals(other dbChar) bool {

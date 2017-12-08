@@ -1,6 +1,9 @@
 package data
 
-import "fmt"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 type dbTable struct {
 	dbTableID                     dbInteger
@@ -96,6 +99,9 @@ func (t dbTable) newDBRecord() (record dbRecord) {
 }
 
 func (t dbTable) dbRecordSize() (size int) {
+	size += freeFlagSize
+	size += bitmapSize(len(t.dbColumns)) //record's null bitmap size
+
 	for i := range t.dbColumns {
 		size += int(t.dbColumns[i].dbTypeSize)
 	}
@@ -114,4 +120,27 @@ func (t dbTable) newDBRecordBlock(dbBlockSize int64) dbRecordBlock {
 	return dbRecordBlock{
 		dbRecords: dbRecords,
 	}
+}
+
+func (t dbTable) recordBlockBytes(recordBlock dbRecordBlock) (b []byte) {
+	b = make([]byte, binary.Size(int64(0)))
+	binary.LittleEndian.PutUint64(b, uint64(recordBlock.nextRecordBlock))
+
+	for _, record := range recordBlock.dbRecords {
+		for _, column := range t.dbColumns {
+			freeFlagB := make([]byte, freeFlagSize)
+			binary.LittleEndian.PutUint32(freeFlagB, record.freeFlag)
+
+			b = append(b, freeFlagB...)
+			b = append(b, record.nulls...)
+
+			if record.columnIsNull(column) {
+				b = append(b, make([]byte, column.dbTypeSize)...)
+			} else {
+				b = append(b, record.columnValue(column).bytes()...)
+			}
+		}
+	}
+
+	return b
 }

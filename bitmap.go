@@ -2,12 +2,16 @@ package data
 
 type bitmap []byte
 
+func bitmapSize(length int) int {
+	return ((length - 1) / 8) + 1
+}
+
 func newBitmap(length int) bitmap {
 	if length <= 0 {
 		return []byte{}
 	}
 
-	return make([]byte, ((length-1)/8)+1)
+	return make([]byte, bitmapSize(length))
 }
 
 func (bm bitmap) At(i uint) bool {
