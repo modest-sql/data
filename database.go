@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -88,4 +89,41 @@ func (db *database) deleteTable(name string) error {
 	}
 
 	return fmt.Errorf("Database `%s' does not contain table with ID %d", db.name(), dbTableID)
+}
+
+func (db database) blockOffset(addr int64) (int64, error) {
+	if addr <= 0 {
+		return 0, errors.New("Address must be greater than 0")
+	}
+
+	return db.dbInfo.blockSize * (addr - 1), nil
+}
+
+func (db database) writeAt(b []byte, addr int64) error {
+	blockPaddingLen := db.dbInfo.blockSize - int64(len(b))
+	if blockPaddingLen < 0 {
+		return errors.New("Byte slice is greater than block size")
+	}
+
+	blockOffset, err := db.blockOffset(addr)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.dbFile.WriteAt(append(b, make([]byte, blockPaddingLen)...), blockOffset)
+	return err
+}
+
+func (db database) readAt(addr int64) ([]byte, error) {
+	blockOffset, err := db.blockOffset(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	b := make([]byte, db.dbInfo.blockSize)
+	if _, err := db.dbFile.ReadAt(b, blockOffset); err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
