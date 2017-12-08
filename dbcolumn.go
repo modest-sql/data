@@ -66,3 +66,9 @@ func (dc *dbColumn) increment() error {
 	dc.dbAutoincrementCounter++
 	return nil
 }
+
+type byColumnPosition []dbColumn
+
+func (c byColumnPosition) Len() int           { return len(c) }
+func (c byColumnPosition) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c byColumnPosition) Less(i, j int) bool { return c[i].dbColumnPosition < c[j].dbColumnPosition }

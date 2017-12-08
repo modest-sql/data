@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sort"
 )
 
 type dbTable struct {
@@ -20,6 +21,8 @@ func newDBTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn) d
 	for i := range dbColumns {
 		dbColumnIDs[dbColumns[i].name()] = dbColumns[i].dbColumnID
 	}
+
+	sort.Sort(byColumnPosition(dbColumns))
 
 	return dbTable{
 		dbTableID:   dbTableID,
