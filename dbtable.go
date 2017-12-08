@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
 
@@ -98,7 +99,7 @@ func (t dbTable) newDBRecord() (record dbRecord) {
 	}
 }
 
-func (t dbTable) dbRecordSize() (size int) {
+func (t dbTable) recordSize() (size int) {
 	size += freeFlagSize
 	size += bitmapSize(len(t.dbColumns)) //record's null bitmap size
 
@@ -108,18 +109,21 @@ func (t dbTable) dbRecordSize() (size int) {
 	return size
 }
 
-func (t dbTable) newDBRecordBlock(dbBlockSize int64) dbRecordBlock {
-	usableRecordBlockSpace := int(dbBlockSize) - 8
-	recordsPerBlock := usableRecordBlockSpace / t.dbRecordSize()
-	dbRecords := []dbRecord{}
+func (t dbTable) recordsPerBlock(blockSize int64) int {
+	return (int(blockSize) - 8) / t.recordSize()
+}
+
+func (t dbTable) newDBRecordBlock(blockSize int64) (rb dbRecordBlock, err error) {
+	recordsPerBlock := t.recordsPerBlock(blockSize)
+	if recordsPerBlock == 0 {
+		return rb, errors.New("Record does not fit in record block")
+	}
 
 	for i := 0; i < recordsPerBlock; i++ {
-		dbRecords = append(dbRecords, t.newDBRecord())
+		rb.dbRecords = append(rb.dbRecords, t.newDBRecord())
 	}
 
-	return dbRecordBlock{
-		dbRecords: dbRecords,
-	}
+	return rb, nil
 }
 
 func (t dbTable) recordBlockBytes(recordBlock dbRecordBlock) (b []byte) {
@@ -143,4 +147,27 @@ func (t dbTable) recordBlockBytes(recordBlock dbRecordBlock) (b []byte) {
 	}
 
 	return b
+}
+
+func (t dbTable) loadRecordBlockBytes(b []byte) dbRecordBlock {
+	recordSize := t.recordSize()
+	rb := dbRecordBlock{nextRecordBlock: int64(binary.LittleEndian.Uint64(b))}
+
+	for rs := b[recordsOffset:]; len(rs) >= recordSize; rs = rs[recordSize:] {
+		record := dbRecord{
+			freeFlag: binary.LittleEndian.Uint32(rs[:freeFlagSize]),
+			nulls:    newBitmap(len(t.dbColumns)),
+			dbTuple:  dbTuple{},
+		}
+
+		valueOffset := freeFlagSize + len(record.nulls)
+		copy(record.nulls, rs[freeFlagSize:valueOffset])
+		for _, column := range t.dbColumns {
+			record.dbTuple[column.name()] = loadDBType(column.dbTypeID, b[valueOffset:valueOffset+int(column.dbTypeSize)])
+		}
+
+		rb.dbRecords = append(rb.dbRecords, record)
+	}
+
+	return rb
 }

@@ -107,3 +107,23 @@ func (dt dbChar) bytes() []byte {
 func (dt dbChar) equals(other dbChar) bool {
 	return string(dt) == string(other)
 }
+
+func loadDBType(dbTypeID dbTypeID, b []byte) dbType {
+	switch dbTypeID {
+	case dbIntegerTypeID:
+		return dbInteger(binary.LittleEndian.Uint64(b))
+	case dbFloatTypeID:
+		return dbFloat(binary.LittleEndian.Uint64(b))
+	case dbDateTimeTypeID:
+		return dbDateTime(binary.LittleEndian.Uint64(b))
+	case dbBooleanTypeID:
+		if b[0] != 0 {
+			return dbBoolean(true)
+		}
+		return dbBoolean(false)
+	case dbCharTypeID:
+		return dbChar(b)
+	}
+
+	return nil
+}

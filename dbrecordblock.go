@@ -1,5 +1,9 @@
 package data
 
+const (
+	recordsOffset = 4
+)
+
 type dbRecordBlock struct {
 	nextRecordBlock int64
 	dbRecords       []dbRecord
