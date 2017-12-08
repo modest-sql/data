@@ -25,6 +25,7 @@ type dbColumn struct {
 	dbColumnID                 dbInteger
 	dbColumnPosition           dbInteger
 	dbTypeID                   dbTypeID
+	dbTypeSize                 dbInteger
 	dbColumnName               dbChar
 	dbAutoincrementCounter     dbInteger
 	dbDefaultValueConstraintID dbInteger

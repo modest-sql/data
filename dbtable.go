@@ -3,11 +3,12 @@ package data
 import "fmt"
 
 type dbTable struct {
-	dbTableID            dbInteger
-	dbTableName          dbChar
-	dbColumnIDs          map[string]dbInteger
-	dbColumns            []dbColumn
-	firstRecordBlockAddr dbInteger
+	dbTableID                     dbInteger
+	dbTableName                   dbChar
+	dbColumnIDs                   map[string]dbInteger
+	dbColumns                     []dbColumn
+	firstRecordBlockAddr          dbInteger
+	firstAvailableRecordBlockAddr dbInteger
 }
 
 func newDBTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn) dbTable {
@@ -91,5 +92,26 @@ func (t dbTable) newDBRecord() (record dbRecord) {
 		freeFlag: freeFlag,
 		nulls:    nulls,
 		dbTuple:  t.newDBTuple(),
+	}
+}
+
+func (t dbTable) dbRecordSize() (size int) {
+	for i := range t.dbColumns {
+		size += int(t.dbColumns[i].dbTypeSize)
+	}
+	return size
+}
+
+func (t dbTable) newDBRecordBlock(dbBlockSize int64) dbRecordBlock {
+	usableRecordBlockSpace := int(dbBlockSize) - 8
+	recordsPerBlock := usableRecordBlockSpace / t.dbRecordSize()
+	dbRecords := []dbRecord{}
+
+	for i := 0; i < recordsPerBlock; i++ {
+		dbRecords = append(dbRecords, t.newDBRecord())
+	}
+
+	return dbRecordBlock{
+		dbRecords: dbRecords,
 	}
 }
