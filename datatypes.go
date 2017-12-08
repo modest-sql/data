@@ -43,3 +43,7 @@ type dbChar []byte
 func (dt dbChar) dbTypeID() dbTypeID {
 	return dbCharTypeID
 }
+
+func (dt dbChar) equals(other dbChar) bool {
+	return string(dt) == string(other)
+}
