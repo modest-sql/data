@@ -3,8 +3,8 @@ package data
 type dbTable struct {
 	dbTableID            dbInteger
 	dbTableName          dbChar
-	dbColumns            []dbColumn
 	dbColumnIDs          map[string]dbInteger
+	dbColumns            []dbColumn
 	firstRecordBlockAddr dbInteger
 }
 
@@ -17,12 +17,12 @@ func newDBTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn) d
 	return dbTable{
 		dbTableID:   dbTableID,
 		dbTableName: dbTableName,
-		dbColumns:   dbColumns,
 		dbColumnIDs: dbColumnIDs,
+		dbColumns:   dbColumns,
 	}
 }
 
-func (t dbTable) hasColumn(name string) (ok bool) {
+func (t dbTable) columnExists(name string) (ok bool) {
 	_, ok = t.dbColumnIDs[name]
 	return ok
 }
