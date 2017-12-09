@@ -13,7 +13,6 @@ type dbInfo struct {
 	blocks               int64
 	availableBlocks      int64
 	availableBlocksFront int64
-	availableBlocksBack  int64
 }
 
 type database struct {
@@ -114,7 +113,7 @@ func (db database) writeAt(b []byte, addr int64) error {
 	return err
 }
 
-func (db database) readAt(addr int64) ([]byte, error) {
+func (db database) readAt(addr int64) (dbBlock, error) {
 	blockOffset, err := db.blockOffset(addr)
 	if err != nil {
 		return nil, err
@@ -126,4 +125,43 @@ func (db database) readAt(addr int64) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+func (db *database) allocBlock() (int64, error) {
+	if db.dbInfo.availableBlocks == 0 {
+		addr := db.dbInfo.blocks + 1
+
+		if err := db.writeAt([]byte{}, addr); err != nil {
+			return 0, err
+		}
+
+		db.dbInfo.blocks++
+		return addr, nil
+	}
+
+	addr := db.dbInfo.availableBlocksFront
+	block, err := db.readAt(addr)
+	if err != nil {
+		return 0, err
+	}
+
+	db.dbInfo.availableBlocksFront = block.nextBlock()
+	db.dbInfo.availableBlocks--
+	return addr, nil
+}
+
+func (db *database) freeBlock(addr int64) error {
+	block, err := db.readAt(addr)
+	if err != nil {
+		return err
+	}
+
+	block.putNextBlock(db.dbInfo.availableBlocksFront)
+	if err := db.writeAt(block, addr); err != nil {
+		return err
+	}
+
+	db.dbInfo.availableBlocksFront = addr
+	db.dbInfo.availableBlocks++
+	return nil
 }
