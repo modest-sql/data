@@ -8,15 +8,14 @@ import (
 )
 
 type dbTable struct {
-	dbTableID                     dbInteger
-	dbTableName                   dbChar
-	dbColumnIDs                   map[string]dbInteger
-	dbColumns                     []dbColumn
-	firstRecordBlockAddr          dbInteger
-	firstAvailableRecordBlockAddr dbInteger
+	dbTableID            dbInteger
+	dbTableName          dbChar
+	dbColumnIDs          map[string]dbInteger
+	dbColumns            []dbColumn
+	firstRecordBlockAddr dbInteger
 }
 
-func newDBTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn) dbTable {
+func newDBTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn, firstRecordBlockAddr dbInteger) dbTable {
 	dbColumnIDs := map[string]dbInteger{}
 	for i := range dbColumns {
 		dbColumnIDs[dbColumns[i].name()] = dbColumns[i].dbColumnID
@@ -25,10 +24,11 @@ func newDBTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn) d
 	sort.Sort(byColumnPosition(dbColumns))
 
 	return dbTable{
-		dbTableID:   dbTableID,
-		dbTableName: dbTableName,
-		dbColumnIDs: dbColumnIDs,
-		dbColumns:   dbColumns,
+		dbTableID:            dbTableID,
+		dbTableName:          dbTableName,
+		dbColumnIDs:          dbColumnIDs,
+		dbColumns:            dbColumns,
+		firstRecordBlockAddr: firstRecordBlockAddr,
 	}
 }
 

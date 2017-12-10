@@ -1,63 +1,96 @@
 package data
 
 const (
-	maxNameLength = 64
-)
-
-const (
 	dbSysTablesID dbInteger = iota
 	dbSysColumnsID
 	dbDefaultNumericsID
 	dbDefaultCharsID
 )
 
+const (
+	firstTablesRecordBlockAddr = iota + 2
+	firstColumnsRecordBlockAddr
+	firstDefaultNumericsAddr
+	firstDefaultCharsAddr
+)
+
+var sysTablesColumns = []dbColumn{
+	buildColumn(0, dbSysTablesID, dbIntegerTypeID, dbIntegerSize, "TABLE_ID"),
+	buildColumn(1, dbSysTablesID, dbIntegerTypeID, dbIntegerSize, "FIRST_RECORD_BLOCK"),
+	buildColumn(2, dbSysTablesID, dbCharTypeID, maxNameLength, "TABLE_NAME"),
+}
+
+var sysColumnsColumns = []dbColumn{
+	buildColumn(0, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_ID"),
+	buildColumn(1, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "TABLE_ID"),
+	buildColumn(2, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_POSITION"),
+	buildColumn(3, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_TYPE"),
+	buildColumn(4, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_SIZE"),
+	buildColumn(5, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_COUNTER"),
+	buildColumn(6, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_CONSTRAINTS"),
+	buildColumn(7, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "DEFAULT_CONSTRAINT_ID"),
+	buildColumn(8, dbSysColumnsID, dbCharTypeID, maxNameLength, "COLUMN_NAME"),
+}
+
+var sysDefaultNumericsColumns = []dbColumn{
+	buildColumn(0, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_ID"),
+	buildColumn(1, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "VALUE"),
+}
+
+var sysDefaultCharsColumns = []dbColumn{
+	buildColumn(0, dbDefaultCharsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_ID"),
+	buildColumn(1, dbDefaultCharsID, dbCharTypeID, maxCharLength, "VALUE"),
+}
+
 type dbSysTable dbTable
 
+func buildColumn(sysTableID dbInteger, i dbInteger, typeID dbTypeID, typeSize dbInteger, name string) dbColumn {
+	return dbColumn{
+		dbTableID:        sysTableID,
+		dbColumnID:       i,
+		dbColumnPosition: i,
+		dbTypeID:         typeID,
+		dbTypeSize:       typeSize,
+		dbColumnName:     dbChar(name),
+	}
+}
+
+func newDBSysTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn, firstRecordBlockAddr dbInteger) dbSysTable {
+	dbColumnIDs := map[string]dbInteger{}
+	for i := range dbColumns {
+		dbColumnIDs[dbColumns[i].name()] = dbColumns[i].dbColumnID
+	}
+
+	return dbSysTable{
+		dbTableID:            dbTableID,
+		dbTableName:          dbTableName,
+		dbColumnIDs:          dbColumnIDs,
+		dbColumns:            dbColumns,
+		firstRecordBlockAddr: firstRecordBlockAddr,
+	}
+}
+
+func newSysTables() []dbSysTable {
+	return []dbSysTable{
+		newTablesSysTable(),
+		newColumnsSysTable(),
+		newDefaultNumericsSysTable(),
+		newDefaultCharsSysTable(),
+	}
+}
+
 func newTablesSysTable() dbSysTable {
-	buildColumn := func(i dbInteger, typeID dbTypeID, typeSize dbInteger, name string) dbColumn {
-		return dbColumn{
-			dbTableID:        dbSysTablesID,
-			dbColumnID:       i,
-			dbColumnPosition: i,
-			dbTypeID:         typeID,
-			dbTypeSize:       typeSize,
-			dbColumnName:     dbChar(name),
-		}
-	}
-
-	columns := []dbColumn{
-		buildColumn(0, dbIntegerTypeID, dbIntegerSize, "TABLE_ID"),
-		buildColumn(1, dbIntegerTypeID, dbIntegerSize, "FIRST_RECORD_BLOCK"),
-		buildColumn(2, dbIntegerTypeID, dbIntegerSize, "FIRST_AVAILABLE_RECORD_BLOCK"),
-		buildColumn(3, dbCharTypeID, maxNameLength, "TABLE_NAME"),
-	}
-
-	return dbSysTable(newDBTable(dbSysTablesID, dbChar("SYS_TABLES"), columns))
+	return newDBSysTable(dbSysTablesID, dbChar("SYS_TABLES"), sysTablesColumns, firstTablesRecordBlockAddr)
 }
 
 func newColumnsSysTable() dbSysTable {
-	buildColumn := func(i dbInteger, typeID dbTypeID, typeSize dbInteger, name string) dbColumn {
-		return dbColumn{
-			dbTableID:        dbSysColumnsID,
-			dbColumnID:       i,
-			dbColumnPosition: i,
-			dbTypeID:         typeID,
-			dbTypeSize:       typeSize,
-			dbColumnName:     dbChar(name),
-		}
-	}
+	return newDBSysTable(dbSysColumnsID, dbChar("SYS_COLUMNS"), sysColumnsColumns, firstColumnsRecordBlockAddr)
+}
 
-	columns := []dbColumn{
-		buildColumn(0, dbIntegerTypeID, dbIntegerSize, "COLUMN_ID"),
-		buildColumn(1, dbIntegerTypeID, dbIntegerSize, "TABLE_ID"),
-		buildColumn(2, dbIntegerTypeID, dbIntegerSize, "COLUMN_POSITION"),
-		buildColumn(3, dbIntegerTypeID, dbIntegerSize, "COLUMN_TYPE"),
-		buildColumn(4, dbIntegerTypeID, dbIntegerSize, "COLUMN_SIZE"),
-		buildColumn(5, dbIntegerTypeID, dbIntegerSize, "COLUMN_COUNTER"),
-		buildColumn(6, dbIntegerTypeID, dbIntegerSize, "COLUMN_CONSTRAINTS"),
-		buildColumn(7, dbIntegerTypeID, dbIntegerSize, "DEFAULT_CONSTRAINT_ID"),
-		buildColumn(8, dbCharTypeID, maxNameLength, "COLUMN_NAME"),
-	}
+func newDefaultNumericsSysTable() dbSysTable {
+	return newDBSysTable(dbDefaultNumericsID, dbChar("SYS_DEFAULT_NUMERICS"), sysDefaultNumericsColumns, firstDefaultNumericsAddr)
+}
 
-	return dbSysTable(newDBTable(dbSysColumnsID, dbChar("SYS_COLUMNS"), columns))
+func newDefaultCharsSysTable() dbSysTable {
+	return newDBSysTable(dbDefaultNumericsID, dbChar("SYS_DEFAULT_CHARS"), sysDefaultCharsColumns, firstDefaultCharsAddr)
 }
