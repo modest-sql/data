@@ -1,11 +1,13 @@
 package data
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 type dbInfo struct {
@@ -17,22 +19,64 @@ type dbInfo struct {
 
 type database struct {
 	dbInfo
-	dbTableIDs map[string]dbInteger
-	dbTables   []dbTable
-	dbFile     *os.File
+	dbTableIDs  map[string]dbInteger
+	dbTables    []dbTable
+	dbSysTables []dbTable
+	dbFile      *os.File
 }
 
-func newDatabase(dbInfo dbInfo, dbTables []dbTable, dbFile *os.File) database {
-	dbTableIDs := map[string]dbInteger{}
-	for i := range dbTables {
-		dbTableIDs[dbTables[i].name()] = dbTables[i].dbTableID
+func NewDatabase(name string, blockSize int64) (*database, error) {
+	sysBlockSize := systemBlockSize()
+	if blockSize <= 0 {
+		return nil, errors.New("Block size must be greater than 0")
 	}
 
-	return database{
-		dbInfo:     dbInfo,
-		dbTableIDs: dbTableIDs,
-		dbTables:   dbTables,
-		dbFile:     dbFile,
+	if blockSize%sysBlockSize != 0 {
+		return nil, fmt.Errorf("Block size must be multiple of disk block size (%d)", sysBlockSize)
+	}
+
+	dbFile, err := os.Create(name)
+	if err != nil {
+		return nil, err
+	}
+
+	dbInfo := dbInfo{blockSize: blockSize, blocks: 1}
+
+	if err := binary.Write(dbFile, binary.LittleEndian, dbInfo); err != nil {
+		return nil, err
+	}
+
+	if _, err := dbFile.Write(make([]byte, int(blockSize)-binary.Size(dbInfo))); err != nil {
+		return nil, err
+	}
+
+	db := newDatabase(dbInfo, dbFile)
+
+	for _, sysTable := range db.dbSysTables {
+		sysTableAddr, err := db.allocBlock()
+		if err != nil {
+			return nil, err
+		}
+
+		sysTableRecordBlock, err := sysTable.newDBRecordBlock(db.blockSize)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := db.writeAt(sysTable.recordBlockBytes(sysTableRecordBlock), sysTableAddr); err != nil {
+			return nil, err
+		}
+	}
+
+	return db, nil
+}
+
+func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
+	return &database{
+		dbInfo:      dbInfo,
+		dbTableIDs:  map[string]dbInteger{},
+		dbSysTables: newSysTables(),
+		dbFile:      dbFile,
 	}
 }
 
@@ -164,4 +208,79 @@ func (db *database) freeBlock(addr int64) error {
 	db.dbInfo.availableBlocksFront = addr
 	db.dbInfo.availableBlocks++
 	return nil
+}
+
+func (db database) tableSet(table dbTable) (set dbSet, err error) {
+	for i := int64(table.firstRecordBlockAddr); i != nullBlockAddr; {
+		block, err := db.readAt(i)
+		if err != nil {
+			return nil, err
+		}
+
+		recordBlock := table.loadRecordBlockBytes(block)
+		records := recordBlock.dbRecords
+		for i := range records {
+			if !records[i].isFree() {
+				set = append(set, records[i].dbTuple)
+			}
+		}
+
+		i = block.nextBlock()
+	}
+
+	return set, nil
+}
+
+func (db database) loadTables() error {
+	tablesSet, err := db.tableSet(db.dbSysTables[0])
+	if err != nil {
+		return err
+	}
+
+	columnsSet, err := db.tableSet(db.dbSysTables[1])
+	if err != nil {
+		return err
+	}
+
+	result := db.joinByAttribute(tablesSet, columnsSet, operatorEquals, "SYS_TABLES.TABLE_ID", "SYS_COLUMNS.TABLE_ID")
+
+	tablesMap := map[string][]dbColumn{}
+	tablesRecordBlocks := map[string]dbInteger{}
+
+	for i := range result {
+		tableName := string(result[i]["SYS_TABLES.TABLE_NAME"].(dbChar))
+
+		column := dbColumn{
+			dbColumnID:                 result[i]["SYS_COLUMNS.COLUMN_ID"].(dbInteger),
+			dbTableID:                  result[i]["SYS_COLUMNS.TABLE_ID"].(dbInteger),
+			dbColumnName:               result[i]["SYS_COLUMNS.COLUMN_NAME"].(dbChar),
+			dbColumnPosition:           result[i]["SYS_COLUMNS.COLUMN_POSITION"].(dbInteger),
+			dbTypeID:                   dbTypeID(result[i]["SYS_COLUMNS.COLUMN_TYPE"].(dbInteger)),
+			dbTypeSize:                 result[i]["SYS_COLUMNS.COLUMN_SIZE"].(dbInteger),
+			dbAutoincrementCounter:     result[i]["SYS_COLUMNS.COLUMN_COUNTER"].(dbInteger),
+			dbConstraints:              dbConstraintType(result[i]["SYS_COLUMNS.COLUMN_CONSTRAINTS"].(dbInteger)),
+			dbDefaultValueConstraintID: result[i]["SYS_COLUMNS.DEFAULT_CONSTRAINT_ID"].(dbInteger),
+		}
+
+		if _, ok := tablesMap[tableName]; !ok {
+			tablesMap[tableName] = []dbColumn{}
+			tablesRecordBlocks[tableName] = result[i]["SYS_TABLES.FIRST_RECORD_BLOCK"].(dbInteger)
+			db.dbTableIDs[tableName] = result[i]["SYS_TABLES.TABLE_ID"].(dbInteger)
+		}
+
+		tablesMap[tableName] = append(tablesMap[tableName], column)
+	}
+
+	for tableName, columns := range tablesMap {
+		table := newDBTable(db.dbTableIDs[tableName], dbChar(tableName), columns, tablesRecordBlocks[tableName])
+		db.dbTables = append(db.dbTables, table)
+	}
+
+	return nil
+}
+
+func systemBlockSize() int64 {
+	var stat syscall.Stat_t
+	syscall.Stat(os.DevNull, &stat)
+	return stat.Blksize
 }

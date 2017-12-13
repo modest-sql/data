@@ -2,6 +2,10 @@ package data
 
 import "encoding/binary"
 
+const (
+	nullBlockAddr = 0
+)
+
 type dbBlock []byte
 
 func (b dbBlock) nextBlock() int64 {

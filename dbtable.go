@@ -134,13 +134,13 @@ func (t dbTable) recordBlockBytes(recordBlock dbRecordBlock) (b []byte) {
 	binary.LittleEndian.PutUint64(b, uint64(recordBlock.nextRecordBlock))
 
 	for _, record := range recordBlock.dbRecords {
+		freeFlagB := make([]byte, freeFlagSize)
+		binary.LittleEndian.PutUint32(freeFlagB, record.freeFlag)
+
+		b = append(b, freeFlagB...)
+		b = append(b, record.nulls...)
+
 		for _, column := range t.dbColumns {
-			freeFlagB := make([]byte, freeFlagSize)
-			binary.LittleEndian.PutUint32(freeFlagB, record.freeFlag)
-
-			b = append(b, freeFlagB...)
-			b = append(b, record.nulls...)
-
 			if record.columnIsNull(column) {
 				b = append(b, make([]byte, column.dbTypeSize)...)
 			} else {
@@ -166,11 +166,15 @@ func (t dbTable) loadRecordBlockBytes(b []byte) dbRecordBlock {
 		valueOffset := freeFlagSize + len(record.nulls)
 		copy(record.nulls, rs[freeFlagSize:valueOffset])
 		for _, column := range t.dbColumns {
-			record.dbTuple[column.name()] = loadDBType(column.dbTypeID, b[valueOffset:valueOffset+int(column.dbTypeSize)])
+			record.dbTuple[concatTable(t.name(), column.name())] = loadDBType(column.dbTypeID, b[valueOffset:valueOffset+int(column.dbTypeSize)])
 		}
 
 		rb.dbRecords = append(rb.dbRecords, record)
 	}
 
 	return rb
+}
+
+func concatTable(tableName string, columnName string) string {
+	return fmt.Sprintf("%s.%s", tableName, columnName)
 }

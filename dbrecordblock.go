@@ -1,7 +1,7 @@
 package data
 
 const (
-	recordsOffset = 4
+	recordsOffset = 8
 )
 
 type dbRecordBlock struct {

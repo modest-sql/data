@@ -33,16 +33,14 @@ var sysColumnsColumns = []dbColumn{
 }
 
 var sysDefaultNumericsColumns = []dbColumn{
-	buildColumn(0, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_ID"),
+	buildColumn(0, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "VALUE_ID"),
 	buildColumn(1, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "VALUE"),
 }
 
 var sysDefaultCharsColumns = []dbColumn{
-	buildColumn(0, dbDefaultCharsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_ID"),
+	buildColumn(0, dbDefaultCharsID, dbIntegerTypeID, dbIntegerSize, "VALUE_ID"),
 	buildColumn(1, dbDefaultCharsID, dbCharTypeID, maxCharLength, "VALUE"),
 }
-
-type dbSysTable dbTable
 
 func buildColumn(sysTableID dbInteger, i dbInteger, typeID dbTypeID, typeSize dbInteger, name string) dbColumn {
 	return dbColumn{
@@ -55,13 +53,13 @@ func buildColumn(sysTableID dbInteger, i dbInteger, typeID dbTypeID, typeSize db
 	}
 }
 
-func newDBSysTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn, firstRecordBlockAddr dbInteger) dbSysTable {
+func newDBSysTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn, firstRecordBlockAddr dbInteger) dbTable {
 	dbColumnIDs := map[string]dbInteger{}
 	for i := range dbColumns {
 		dbColumnIDs[dbColumns[i].name()] = dbColumns[i].dbColumnID
 	}
 
-	return dbSysTable{
+	return dbTable{
 		dbTableID:            dbTableID,
 		dbTableName:          dbTableName,
 		dbColumnIDs:          dbColumnIDs,
@@ -70,8 +68,8 @@ func newDBSysTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn
 	}
 }
 
-func newSysTables() []dbSysTable {
-	return []dbSysTable{
+func newSysTables() []dbTable {
+	return []dbTable{
 		newTablesSysTable(),
 		newColumnsSysTable(),
 		newDefaultNumericsSysTable(),
@@ -79,18 +77,18 @@ func newSysTables() []dbSysTable {
 	}
 }
 
-func newTablesSysTable() dbSysTable {
+func newTablesSysTable() dbTable {
 	return newDBSysTable(dbSysTablesID, dbChar("SYS_TABLES"), sysTablesColumns, firstTablesRecordBlockAddr)
 }
 
-func newColumnsSysTable() dbSysTable {
+func newColumnsSysTable() dbTable {
 	return newDBSysTable(dbSysColumnsID, dbChar("SYS_COLUMNS"), sysColumnsColumns, firstColumnsRecordBlockAddr)
 }
 
-func newDefaultNumericsSysTable() dbSysTable {
+func newDefaultNumericsSysTable() dbTable {
 	return newDBSysTable(dbDefaultNumericsID, dbChar("SYS_DEFAULT_NUMERICS"), sysDefaultNumericsColumns, firstDefaultNumericsAddr)
 }
 
-func newDefaultCharsSysTable() dbSysTable {
+func newDefaultCharsSysTable() dbTable {
 	return newDBSysTable(dbDefaultNumericsID, dbChar("SYS_DEFAULT_CHARS"), sysDefaultCharsColumns, firstDefaultCharsAddr)
 }
