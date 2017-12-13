@@ -12,6 +12,7 @@ type dbRecordBlock struct {
 func (rb *dbRecordBlock) insertRecord(record dbRecord) bool {
 	for i := range rb.dbRecords {
 		if rb.dbRecords[i].isFree() {
+			rb.dbRecords[i].removeFree()
 			rb.dbRecords[i] = record
 			return true
 		}

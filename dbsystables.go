@@ -15,35 +15,36 @@ const (
 )
 
 var sysTablesColumns = []dbColumn{
-	buildColumn(0, dbSysTablesID, dbIntegerTypeID, dbIntegerSize, "TABLE_ID"),
-	buildColumn(1, dbSysTablesID, dbIntegerTypeID, dbIntegerSize, "FIRST_RECORD_BLOCK"),
-	buildColumn(2, dbSysTablesID, dbCharTypeID, maxNameLength, "TABLE_NAME"),
+	buildColumn(0, dbSysTablesID, dbIntegerTypeID, dbIntegerSize, "SYS_TABLES", "TABLE_ID"),
+	buildColumn(1, dbSysTablesID, dbIntegerTypeID, dbIntegerSize, "SYS_TABLES", "FIRST_RECORD_BLOCK"),
+	buildColumn(2, dbSysTablesID, dbCharTypeID, maxNameLength, "SYS_TABLES", "TABLE_NAME"),
 }
 
 var sysColumnsColumns = []dbColumn{
-	buildColumn(0, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_ID"),
-	buildColumn(1, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "TABLE_ID"),
-	buildColumn(2, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_POSITION"),
-	buildColumn(3, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_TYPE"),
-	buildColumn(4, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_SIZE"),
-	buildColumn(5, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_COUNTER"),
-	buildColumn(6, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "COLUMN_CONSTRAINTS"),
-	buildColumn(7, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "DEFAULT_CONSTRAINT_ID"),
-	buildColumn(8, dbSysColumnsID, dbCharTypeID, maxNameLength, "COLUMN_NAME"),
+	buildColumn(0, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "COLUMN_ID"),
+	buildColumn(1, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "TABLE_ID"),
+	buildColumn(2, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "COLUMN_POSITION"),
+	buildColumn(3, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "COLUMN_TYPE"),
+	buildColumn(4, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "COLUMN_SIZE"),
+	buildColumn(5, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "COLUMN_COUNTER"),
+	buildColumn(6, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "COLUMN_CONSTRAINTS"),
+	buildColumn(7, dbSysColumnsID, dbIntegerTypeID, dbIntegerSize, "SYS_COLUMNS", "DEFAULT_CONSTRAINT_ID"),
+	buildColumn(8, dbSysColumnsID, dbCharTypeID, maxNameLength, "SYS_COLUMNS", "COLUMN_NAME"),
 }
 
 var sysDefaultNumericsColumns = []dbColumn{
-	buildColumn(0, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "VALUE_ID"),
-	buildColumn(1, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "VALUE"),
+	buildColumn(0, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "SYS_DEFAULT_NUMERICS", "VALUE_ID"),
+	buildColumn(1, dbDefaultNumericsID, dbIntegerTypeID, dbIntegerSize, "SYS_DEFAULT_NUMERICS", "VALUE"),
 }
 
 var sysDefaultCharsColumns = []dbColumn{
-	buildColumn(0, dbDefaultCharsID, dbIntegerTypeID, dbIntegerSize, "VALUE_ID"),
-	buildColumn(1, dbDefaultCharsID, dbCharTypeID, maxCharLength, "VALUE"),
+	buildColumn(0, dbDefaultCharsID, dbIntegerTypeID, dbIntegerSize, "SYS_DEFAULT_CHARS", "VALUE_ID"),
+	buildColumn(1, dbDefaultCharsID, dbCharTypeID, maxCharLength, "SYS_DEFAULT_CHARS", "VALUE"),
 }
 
-func buildColumn(sysTableID dbInteger, i dbInteger, typeID dbTypeID, typeSize dbInteger, name string) dbColumn {
+func buildColumn(i dbInteger, sysTableID dbInteger, typeID dbTypeID, typeSize dbInteger, table string, name string) dbColumn {
 	return dbColumn{
+		dbTable:          dbTable{dbTableName: dbChar(table)},
 		dbTableID:        sysTableID,
 		dbColumnID:       i,
 		dbColumnPosition: i,

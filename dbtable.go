@@ -102,6 +102,22 @@ func (t dbTable) newDBRecord() (record dbRecord) {
 	}
 }
 
+func (t dbTable) buildDBRecord(values map[string]dbType) (record dbRecord, err error) {
+	record = t.newDBRecord()
+	record.freeFlag = 0
+
+	for key, value := range values {
+		column, err := t.column(qualifiedIdentifier(t, key))
+		if err != nil {
+			return record, err
+		}
+
+		record.insertColumnValue(value, *column)
+	}
+
+	return record, nil
+}
+
 func (t dbTable) recordSize() (size int) {
 	size += freeFlagSize
 	size += bitmapSize(len(t.dbColumns)) //record's null bitmap size
@@ -166,15 +182,13 @@ func (t dbTable) loadRecordBlockBytes(b []byte) dbRecordBlock {
 		valueOffset := freeFlagSize + len(record.nulls)
 		copy(record.nulls, rs[freeFlagSize:valueOffset])
 		for _, column := range t.dbColumns {
-			record.dbTuple[concatTable(t.name(), column.name())] = loadDBType(column.dbTypeID, b[valueOffset:valueOffset+int(column.dbTypeSize)])
+			nextValueOffset := valueOffset + int(column.dbTypeSize)
+			record.dbTuple[column.name()] = loadDBType(column.dbTypeID, rs[valueOffset:nextValueOffset])
+			valueOffset = nextValueOffset
 		}
 
 		rb.dbRecords = append(rb.dbRecords, record)
 	}
 
 	return rb
-}
-
-func concatTable(tableName string, columnName string) string {
-	return fmt.Sprintf("%s.%s", tableName, columnName)
 }

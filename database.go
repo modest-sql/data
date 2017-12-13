@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/modest-sql/common"
 )
 
 type dbInfo struct {
@@ -15,6 +17,7 @@ type dbInfo struct {
 	blocks               int64
 	availableBlocks      int64
 	availableBlocksFront int64
+	tables               int64
 }
 
 type database struct {
@@ -41,16 +44,11 @@ func NewDatabase(name string, blockSize int64) (*database, error) {
 	}
 
 	dbInfo := dbInfo{blockSize: blockSize, blocks: 1}
-
-	if err := binary.Write(dbFile, binary.LittleEndian, dbInfo); err != nil {
-		return nil, err
-	}
-
-	if _, err := dbFile.Write(make([]byte, int(blockSize)-binary.Size(dbInfo))); err != nil {
-		return nil, err
-	}
-
 	db := newDatabase(dbInfo, dbFile)
+
+	if err := db.writeDbInfo(); err != nil {
+		return nil, err
+	}
 
 	for _, sysTable := range db.dbSysTables {
 		sysTableAddr, err := db.allocBlock()
@@ -71,6 +69,70 @@ func NewDatabase(name string, blockSize int64) (*database, error) {
 	return db, nil
 }
 
+func (db *database) NewTable(name string, columnDefiners []common.TableColumnDefiner) error {
+	tableName := make(dbChar, maxNameLength)
+	copy(tableName, name)
+
+	firstRecordBlockAddr, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	tableID := dbInteger(db.tables + 1)
+
+	values := map[string]dbType{
+		"TABLE_ID":           tableID,
+		"FIRST_RECORD_BLOCK": dbInteger(firstRecordBlockAddr),
+		"TABLE_NAME":         tableName,
+	}
+
+	if err := db.addTable(newDBTable(tableID, tableName, []dbColumn{}, dbInteger(firstRecordBlockAddr))); err != nil {
+		return err
+	}
+
+	db.tables++
+	if err := db.writeDbInfo(); err != nil {
+		return err
+	}
+
+	return db.insert(db.sysTables(), values)
+}
+
+func (db database) insert(table dbTable, values map[string]dbType) error {
+	record, err := table.buildDBRecord(values)
+	if err != nil {
+		return err
+	}
+
+	for addr := int64(table.firstRecordBlockAddr); addr != nullBlockAddr; {
+		block, err := db.readAt(addr)
+		if err != nil {
+			return err
+		}
+
+		rb := table.loadRecordBlockBytes(block)
+		if rb.insertRecord(record) {
+			return db.writeAt(table.recordBlockBytes(rb), addr)
+		}
+
+		addr = block.nextBlock()
+	}
+
+	addr, err := db.allocBlock()
+	if err != nil {
+		return err
+	}
+
+	rb, err := table.newDBRecordBlock(db.blockSize)
+	if err != nil {
+		return err
+	}
+
+	rb.insertRecord(record)
+
+	return db.writeAt(table.recordBlockBytes(rb), addr)
+}
+
 func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
 	return &database{
 		dbInfo:      dbInfo,
@@ -78,6 +140,22 @@ func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
 		dbSysTables: newSysTables(),
 		dbFile:      dbFile,
 	}
+}
+
+func (db database) sysTables() dbTable {
+	return db.dbSysTables[0]
+}
+
+func (db database) sysColumns() dbTable {
+	return db.dbSysTables[1]
+}
+
+func (db database) sysNumerics() dbTable {
+	return db.dbSysTables[2]
+}
+
+func (db database) sysChars() dbTable {
+	return db.dbSysTables[3]
 }
 
 func (db database) name() string {
@@ -89,6 +167,22 @@ func (db database) name() string {
 	}
 
 	return filename
+}
+
+func (db database) writeDbInfo() error {
+	if _, err := db.dbFile.Seek(0, os.SEEK_END); err != nil {
+		return err
+	}
+
+	if err := binary.Write(db.dbFile, binary.LittleEndian, db.dbInfo); err != nil {
+		return err
+	}
+
+	if _, err := db.dbFile.Write(make([]byte, int(db.blockSize)-binary.Size(db.dbInfo))); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (db database) table(name string) (*dbTable, error) {
@@ -273,6 +367,9 @@ func (db database) loadTables() error {
 
 	for tableName, columns := range tablesMap {
 		table := newDBTable(db.dbTableIDs[tableName], dbChar(tableName), columns, tablesRecordBlocks[tableName])
+		for i := range table.dbColumns {
+			table.dbColumns[i].dbTable = table
+		}
 		db.dbTables = append(db.dbTables, table)
 	}
 
@@ -283,4 +380,24 @@ func systemBlockSize() int64 {
 	var stat syscall.Stat_t
 	syscall.Stat(os.DevNull, &stat)
 	return stat.Blksize
+}
+
+func splitIdentifier(identifier string) (tableName string, columnName string) {
+	names := strings.Split(identifier, ".")
+	if len(names) != 2 {
+		return "", names[0]
+	}
+	return names[0], names[1]
+}
+
+func qualifiedIdentifier(table dbTable, identifier string) string {
+	t, c := splitIdentifier(identifier)
+	if t == "" {
+		return concatTable(table.name(), c)
+	}
+	return identifier
+}
+
+func concatTable(tableName string, columnName string) string {
+	return fmt.Sprintf("%s.%s", tableName, columnName)
 }

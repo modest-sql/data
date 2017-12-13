@@ -21,6 +21,7 @@ var dbConstraintTypeNames = map[dbConstraintType]string{
 }
 
 type dbColumn struct {
+	dbTable                    dbTable
 	dbTableID                  dbInteger
 	dbColumnID                 dbInteger
 	dbColumnPosition           dbInteger
@@ -33,7 +34,7 @@ type dbColumn struct {
 }
 
 func (dc dbColumn) name() string {
-	return string(dc.dbColumnName)
+	return concatTable(dc.dbTable.name(), string(dc.dbColumnName))
 }
 
 func (dc dbColumn) hasConstraint(constraint dbConstraintType) bool {

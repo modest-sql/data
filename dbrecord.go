@@ -11,6 +11,10 @@ type dbRecord struct {
 	dbTuple  dbTuple
 }
 
+func (r *dbRecord) removeFree() {
+	r.freeFlag = 0
+}
+
 func (r dbRecord) isFree() bool {
 	return r.freeFlag == freeFlag
 }

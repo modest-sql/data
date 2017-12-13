@@ -3,6 +3,8 @@ package data
 import (
 	"fmt"
 	"testing"
+
+	"github.com/modest-sql/common"
 )
 
 func TestSystemBlockSize(t *testing.T) {
@@ -11,7 +13,11 @@ func TestSystemBlockSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	set, err := db.tableSet(db.dbSysTables[0])
+	if err := db.NewTable("MOVIES", []common.TableColumnDefiner{}); err != nil {
+		t.Fatal(err)
+	}
+
+	set, err := db.tableSet(db.sysTables())
 	if err != nil {
 		t.Fatal(err)
 	}
