@@ -32,12 +32,6 @@ func TestSystemBlockSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fmt.Printf("DB2: %+v\n", db2.dbInfo)
-
-	table, err := db.table("TABLE2")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Printf("%+v\n", table)
+	fmt.Printf("DB1: %+v\n", db.AllTables())
+	fmt.Printf("DB2: %+v\n", db2.AllTables())
 }

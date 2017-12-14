@@ -8,8 +8,8 @@ type dbTypeID uint8
 const (
 	dbIntegerTypeID dbTypeID = iota
 	dbFloatTypeID
-	dbDateTimeTypeID
 	dbBooleanTypeID
+	dbDateTimeTypeID
 	dbCharTypeID
 )
 

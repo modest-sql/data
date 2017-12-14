@@ -474,6 +474,25 @@ func (db *database) loadTables() error {
 	return nil
 }
 
+/*
+CommandFactory creates instances of common.Command according to command object received
+as parameter. Once the command is run, execution is moved to the callback function received as parameter.
+*/
+func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error)) (command common.Command) {
+	switch cmd := cmd.(type) {
+	case *common.CreateTableCommand:
+		command = common.NewCommand(
+			cmd,
+			common.Create,
+			func() {
+				cb(nil, db.NewTable(cmd.TableName(), cmd.TableColumnDefiners()))
+			},
+		)
+	}
+
+	return command
+}
+
 func systemBlockSize() int64 {
 	var stat syscall.Stat_t
 	syscall.Stat(os.DevNull, &stat)
