@@ -19,17 +19,25 @@ func TestSystemBlockSize(t *testing.T) {
 	}
 
 	for i := 0; i < 12; i++ {
-		if err := db.NewTable(fmt.Sprintf("TABLE_%d", i), columns); err != nil {
+		if err := db.NewTable(fmt.Sprintf("TABLE%d", i), columns); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	fmt.Printf("DB1: %+v\n", db.dbInfo)
+	//fmt.Printf("%+v\n", db.dbTables)
 
 	db2, err := LoadDatabase("test.db")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Printf("DB1: %+v\n", db2.dbInfo)
+	fmt.Printf("DB2: %+v\n", db2.dbInfo)
+
+	table, err := db.table("TABLE2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Printf("%+v\n", table)
 }

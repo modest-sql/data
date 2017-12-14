@@ -1,7 +1,10 @@
 package data
 
-import "fmt"
-import "github.com/modest-sql/common"
+import (
+	"fmt"
+
+	"github.com/modest-sql/common"
+)
 
 type dbConstraintType uint8
 
@@ -109,7 +112,7 @@ func (db *database) newDBColumn(table dbTable, definition common.TableColumnDefi
 }
 
 func (dc dbColumn) name() string {
-	return concatTable(dc.dbTable.name(), string(dc.dbColumnName))
+	return concatTable(dc.dbTable.name(), trimName(dc.dbColumnName))
 }
 
 func (dc dbColumn) hasConstraint(constraint dbConstraintType) bool {

@@ -33,7 +33,7 @@ func newDBTable(dbTableID dbInteger, dbTableName dbChar, dbColumns []dbColumn, f
 }
 
 func (t dbTable) name() string {
-	return string(t.dbTableName)
+	return trimName(t.dbTableName)
 }
 
 func (t dbTable) column(name string) (*dbColumn, error) {
@@ -55,6 +55,9 @@ func (t *dbTable) addColumn(dbColumn dbColumn) error {
 	if dbColumn, _ := t.column(dbColumn.name()); dbColumn != nil {
 		return fmt.Errorf("Duplicate column `%s' in table `%s'", dbColumn.name(), t.name())
 	}
+
+	dbColumn.dbTable = *t
+	dbColumn.dbTableID = t.dbTableID
 
 	t.dbColumnIDs[dbColumn.name()] = dbColumn.dbColumnID
 	t.dbColumns = append(t.dbColumns, dbColumn)

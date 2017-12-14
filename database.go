@@ -1,6 +1,7 @@
 package data
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -418,7 +419,7 @@ func (db database) tableSet(table dbTable) (set dbSet, err error) {
 	return set, nil
 }
 
-func (db database) loadTables() error {
+func (db *database) loadTables() error {
 	tablesSet, err := db.tableSet(db.sysTables())
 	if err != nil {
 		return err
@@ -430,12 +431,13 @@ func (db database) loadTables() error {
 	}
 
 	result := joinByAttribute(tablesSet, columnsSet, operatorEquals, "SYS_TABLES.TABLE_ID", "SYS_COLUMNS.TABLE_ID")
+	tablesSet, columnsSet = nil, nil
 
 	tablesMap := map[string][]dbColumn{}
 	tablesRecordBlocks := map[string]dbInteger{}
 
 	for i := range result {
-		tableName := string(result[i]["SYS_TABLES.TABLE_NAME"].(dbChar))
+		tableName := trimName(result[i]["SYS_TABLES.TABLE_NAME"].(dbChar))
 
 		column := dbColumn{
 			dbColumnID:                 result[i]["SYS_COLUMNS.COLUMN_ID"].(dbInteger),
@@ -458,10 +460,13 @@ func (db database) loadTables() error {
 		tablesMap[tableName] = append(tablesMap[tableName], column)
 	}
 
+	result = nil
 	for tableName, columns := range tablesMap {
-		table := newDBTable(db.dbTableIDs[tableName], dbChar(tableName), columns, tablesRecordBlocks[tableName])
-		for i := range table.dbColumns {
-			table.dbColumns[i].dbTable = table
+		table := newDBTable(db.dbTableIDs[tableName], dbChar(tableName), []dbColumn{}, tablesRecordBlocks[tableName])
+		for i := range columns {
+			if err := table.addColumn(columns[i]); err != nil {
+				return err
+			}
 		}
 		db.dbTables = append(db.dbTables, table)
 	}
@@ -493,4 +498,8 @@ func qualifiedIdentifier(table dbTable, identifier string) string {
 
 func concatTable(tableName string, columnName string) string {
 	return fmt.Sprintf("%s.%s", tableName, columnName)
+}
+
+func trimName(name []byte) string {
+	return string(bytes.TrimRight(name, "\x00"))
 }
