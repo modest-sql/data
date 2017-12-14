@@ -1,7 +1,11 @@
 package data
 
-import "encoding/binary"
-import "github.com/modest-sql/common"
+import (
+	"encoding/binary"
+	"fmt"
+
+	"github.com/modest-sql/common"
+)
 
 type dbTypeID uint8
 
@@ -93,6 +97,12 @@ func (dt dbBoolean) bytes() []byte {
 
 type dbChar []byte
 
+func newChar(size dbInteger, str string) dbChar {
+	tmp := make(dbChar, size)
+	copy(tmp, str)
+	return tmp
+}
+
 func (dt dbChar) dbTypeID() dbTypeID {
 	return dbCharTypeID
 }
@@ -153,4 +163,52 @@ func castDBType(definition common.TableColumnDefiner) dbType {
 	}
 
 	return nil
+}
+
+func convertValuesMap(table dbTable, values map[string]interface{}) (map[string]dbType, error) {
+	dbValues := map[string]dbType{}
+	for key, value := range values {
+		column, err := table.column(key)
+		if err != nil {
+			return nil, err
+		}
+
+		var dbValue dbType
+		switch v := value.(type) {
+		case int64:
+			if column.dbTypeID != dbIntegerTypeID && column.dbTypeID != dbDateTimeTypeID {
+				return nil, fmt.Errorf("Column `%s' is not of type INTEGER or DATETIME", column.name())
+			}
+
+			if column.dbTypeID == dbIntegerTypeID {
+				dbValue = dbInteger(v)
+			} else {
+				dbValue = dbDateTime(v)
+			}
+		case float64:
+			if column.dbTypeID != dbFloatTypeID {
+				return nil, fmt.Errorf("Column `%s' is not of type FLOAT", column.name())
+			}
+			dbValue = dbFloat(v)
+		case bool:
+			if column.dbTypeID != dbBooleanTypeID {
+				return nil, fmt.Errorf("Column `%s' is not of type BOOLEAN", column.name())
+			}
+			dbValue = dbBoolean(v)
+		case string:
+			if column.dbTypeID != dbCharTypeID {
+				return nil, fmt.Errorf("Column `%s' is not of type CHAR", column.name())
+			}
+
+			if len(v) > int(column.dbTypeSize) {
+				return nil, fmt.Errorf("Column `%s' length can't be greater than %d bytes", column.name(), column.dbTypeSize)
+			}
+
+			dbValue = newChar(column.dbTypeSize, v)
+		}
+
+		dbValues[column.name()] = dbValue
+	}
+
+	return dbValues, nil
 }

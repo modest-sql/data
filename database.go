@@ -153,7 +153,30 @@ func (db *database) NewTable(name string, columnDefiners []common.TableColumnDef
 		}
 	}
 
+	rb, err := table.newDBRecordBlock(db.blockSize)
+	if err != nil {
+		return err
+	}
+
+	if err := db.writeAt(table.recordBlockBytes(rb), firstRecordBlockAddr); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (db *database) Insert(name string, values map[string]interface{}) error {
+	table, err := db.table(name)
+	if err != nil {
+		return err
+	}
+
+	dbValues, err := convertValuesMap(*table, values)
+	if err != nil {
+		return err
+	}
+
+	return db.insert(*table, dbValues)
 }
 
 func (db *database) insert(table dbTable, values map[string]dbType) error {
@@ -486,6 +509,14 @@ func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			common.Create,
 			func() {
 				cb(nil, db.NewTable(cmd.TableName(), cmd.TableColumnDefiners()))
+			},
+		)
+	case *common.InsertCommand:
+		command = common.NewCommand(
+			cmd,
+			common.Insert,
+			func() {
+				cb(nil, db.Insert(cmd.TableName(), cmd.Values()))
 			},
 		)
 	}

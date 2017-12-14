@@ -37,7 +37,7 @@ func (t dbTable) name() string {
 }
 
 func (t dbTable) column(name string) (*dbColumn, error) {
-	dbColumnID, ok := t.dbColumnIDs[name]
+	dbColumnID, ok := t.dbColumnIDs[qualifiedIdentifier(t, name)]
 	if !ok {
 		return nil, fmt.Errorf("Column `%s' does not exist in table `%s'", name, t.name())
 	}

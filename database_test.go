@@ -24,14 +24,32 @@ func TestSystemBlockSize(t *testing.T) {
 		}
 	}
 
-	fmt.Printf("DB1: %+v\n", db.dbInfo)
-	//fmt.Printf("%+v\n", db.dbTables)
+	values := map[string]interface{}{
+		"TABLE0.ID": 57,
+		"NAME":      "HELLO",
+	}
 
-	db2, err := LoadDatabase("test.db")
+	if err := db.Insert("TABLE0", values); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.Insert("TABLE0", values); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.Insert("TABLE0", values); err != nil {
+		t.Fatal(err)
+	}
+
+	table0, err := db.table("TABLE0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Printf("DB1: %+v\n", db.AllTables())
-	fmt.Printf("DB2: %+v\n", db2.AllTables())
+	set, err := db.tableSet(*table0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(set)
 }
