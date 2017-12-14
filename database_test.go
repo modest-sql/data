@@ -24,31 +24,12 @@ func TestSystemBlockSize(t *testing.T) {
 		}
 	}
 
-	tablesSet, err := db.tableSet(db.sysTables())
+	fmt.Printf("DB1: %+v\n", db.dbInfo)
+
+	db2, err := LoadDatabase("test.db")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	columnsSet, err := db.tableSet(db.sysColumns())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	numericsSet, err := db.tableSet(db.sysNumerics())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	charsSet, err := db.tableSet(db.sysChars())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println(charsSet)
-
-	fmt.Printf("TABLES: %d\n", len(tablesSet))
-	fmt.Printf("COLUMNS: %d\n", len(columnsSet))
-	fmt.Printf("NUMERICS: %d\n", len(numericsSet))
-	fmt.Printf("CHARS: %d\n", len(charsSet))
-	fmt.Printf("BLOCKS: %d\n", db.dbInfo.blocks)
+	fmt.Printf("DB1: %+v\n", db2.dbInfo)
 }

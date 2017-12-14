@@ -31,7 +31,7 @@ type database struct {
 	dbFile      *os.File
 }
 
-func NewDatabase(name string, blockSize int64) (*database, error) {
+func NewDatabase(path string, blockSize int64) (*database, error) {
 	sysBlockSize := systemBlockSize()
 	if blockSize <= 0 {
 		return nil, errors.New("Block size must be greater than 0")
@@ -41,7 +41,7 @@ func NewDatabase(name string, blockSize int64) (*database, error) {
 		return nil, fmt.Errorf("Block size must be multiple of disk block size (%d)", sysBlockSize)
 	}
 
-	dbFile, err := os.Create(name)
+	dbFile, err := os.Create(path)
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +67,25 @@ func NewDatabase(name string, blockSize int64) (*database, error) {
 		if err := db.writeAt(sysTable.recordBlockBytes(sysTableRecordBlock), sysTableAddr); err != nil {
 			return nil, err
 		}
+	}
+
+	return db, nil
+}
+
+func LoadDatabase(path string) (*database, error) {
+	dbFile, err := os.OpenFile(path, os.O_RDWR, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	db := newDatabase(dbInfo{}, dbFile)
+
+	if err := db.readDbInfo(); err != nil {
+		return nil, err
+	}
+
+	if err := db.loadTables(); err != nil {
+		return nil, err
 	}
 
 	return db, nil
@@ -216,6 +235,31 @@ func (db database) name() string {
 	}
 
 	return filename
+}
+
+func (db *database) readDbInfo() error {
+	blockSizeB := make([]byte, 8)
+	if _, err := db.dbFile.ReadAt(blockSizeB, 0); err != nil {
+		return err
+	}
+
+	b := make([]byte, binary.LittleEndian.Uint64(blockSizeB))
+	if _, err := db.dbFile.ReadAt(b, 0); err != nil {
+		return err
+	}
+
+	db.dbInfo = dbInfo{
+		blockSize:            int64(binary.LittleEndian.Uint64(b[:8])),
+		blocks:               int64(binary.LittleEndian.Uint64(b[8:16])),
+		availableBlocks:      int64(binary.LittleEndian.Uint64(b[16:24])),
+		availableBlocksFront: int64(binary.LittleEndian.Uint64(b[24:32])),
+		tables:               int64(binary.LittleEndian.Uint64(b[32:40])),
+		columns:              int64(binary.LittleEndian.Uint64(b[40:48])),
+		defaultNumerics:      int64(binary.LittleEndian.Uint64(b[48:56])),
+		defaultChars:         int64(binary.LittleEndian.Uint64(b[56:64])),
+	}
+
+	return nil
 }
 
 func (db database) writeDbInfo() error {
