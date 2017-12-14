@@ -3,7 +3,7 @@ package data
 import "encoding/binary"
 
 const (
-	nullBlockAddr = 0
+	nullBlockAddr int64 = 0
 )
 
 type dbBlock []byte

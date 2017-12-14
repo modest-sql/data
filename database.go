@@ -98,12 +98,13 @@ func (db *database) NewTable(name string, columnDefiners []common.TableColumnDef
 	return db.insert(db.sysTables(), values)
 }
 
-func (db database) insert(table dbTable, values map[string]dbType) error {
+func (db *database) insert(table dbTable, values map[string]dbType) error {
 	record, err := table.buildDBRecord(values)
 	if err != nil {
 		return err
 	}
 
+	lastAddr := nullBlockAddr
 	for addr := int64(table.firstRecordBlockAddr); addr != nullBlockAddr; {
 		block, err := db.readAt(addr)
 		if err != nil {
@@ -115,11 +116,22 @@ func (db database) insert(table dbTable, values map[string]dbType) error {
 			return db.writeAt(table.recordBlockBytes(rb), addr)
 		}
 
+		lastAddr = addr
 		addr = block.nextBlock()
 	}
 
-	addr, err := db.allocBlock()
+	newAddr, err := db.allocBlock()
 	if err != nil {
+		return err
+	}
+
+	lastBlock, err := db.readAt(lastAddr)
+	if err != nil {
+		return err
+	}
+
+	lastBlock.putNextBlock(newAddr)
+	if err := db.writeAt(lastBlock, lastAddr); err != nil {
 		return err
 	}
 
@@ -129,8 +141,7 @@ func (db database) insert(table dbTable, values map[string]dbType) error {
 	}
 
 	rb.insertRecord(record)
-
-	return db.writeAt(table.recordBlockBytes(rb), addr)
+	return db.writeAt(table.recordBlockBytes(rb), newAddr)
 }
 
 func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
@@ -170,7 +181,7 @@ func (db database) name() string {
 }
 
 func (db database) writeDbInfo() error {
-	if _, err := db.dbFile.Seek(0, os.SEEK_END); err != nil {
+	if _, err := db.dbFile.Seek(0, 0); err != nil {
 		return err
 	}
 

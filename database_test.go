@@ -13,8 +13,10 @@ func TestSystemBlockSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := db.NewTable("MOVIES", []common.TableColumnDefiner{}); err != nil {
-		t.Fatal(err)
+	for i := 0; i < 500; i++ {
+		if err := db.NewTable(fmt.Sprintf("TABLE_%d", i), []common.TableColumnDefiner{}); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	set, err := db.tableSet(db.sysTables())
@@ -22,5 +24,6 @@ func TestSystemBlockSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fmt.Println(set)
+	fmt.Println(len(set))
+	fmt.Printf("BLOCKS: %d\n", db.dbInfo.blocks)
 }
