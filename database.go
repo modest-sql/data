@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"syscall"
 
@@ -179,40 +180,6 @@ func (db *database) Insert(name string, values map[string]interface{}) error {
 	return db.insert(*table, dbValues)
 }
 
-func (db *database) Delete(name string) error {
-	table, err := db.table(name)
-	if err != nil {
-		return err
-	}
-
-	return db.delete(*table)
-}
-
-func (db *database) delete(table dbTable) error {
-	for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
-		block, err := db.readAt(blockAddr)
-		if err != nil {
-			return err
-		}
-		recordBlock := table.loadRecordBlockBytes(block)
-
-		// Free all records
-		for index := range recordBlock.dbRecords {
-			// Set freeFlag on tuple
-			recordBlock.dbRecords[index].freeFlag = freeFlag
-		}
-		// Serialize record block
-		freeBlock := table.recordBlockBytes(recordBlock)
-
-		// Write modified block
-		if err := db.writeAt(freeBlock, blockAddr); err != nil {
-			return err
-		}
-		blockAddr = recordBlock.nextRecordBlock
-	}
-	return nil
-}
-
 func (db *database) insert(table dbTable, values map[string]dbType) error {
 	record, err := table.buildDBRecord(values)
 	if err != nil {
@@ -257,6 +224,52 @@ func (db *database) insert(table dbTable, values map[string]dbType) error {
 
 	rb.insertRecord(record)
 	return db.writeAt(table.recordBlockBytes(rb), newAddr)
+}
+
+func (db *database) Delete(name string) error {
+	table, err := db.table(name)
+	if err != nil {
+		return err
+	}
+
+	return db.delete(*table)
+}
+
+func (db *database) delete(table dbTable) error {
+	for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
+		block, err := db.readAt(blockAddr)
+		if err != nil {
+			return err
+		}
+		recordBlock := table.loadRecordBlockBytes(block)
+
+		// Free all records
+		for index := range recordBlock.dbRecords {
+			// Set freeFlag on tuple
+			recordBlock.dbRecords[index].freeFlag = freeFlag
+		}
+		// Serialize record block
+		freeBlock := table.recordBlockBytes(recordBlock)
+
+		// Write modified block
+		if err := db.writeAt(freeBlock, blockAddr); err != nil {
+			return err
+		}
+		blockAddr = recordBlock.nextRecordBlock
+	}
+	return nil
+}
+
+func (db *database) Update(name string, values map[string]interface{}) error {
+	return errors.New("Update not implemented")
+}
+
+func (db *database) Drop(name string) error {
+	return errors.New("Drop not implented")
+}
+
+func (db *database) Select(name string) (*ResultSet, error) {
+	return nil, errors.New("Selected not implemented")
 }
 
 func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
@@ -553,6 +566,14 @@ func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 				cb(nil, db.Insert(cmd.TableName(), cmd.Values()))
 			},
 		)
+	case *common.UpdateTableCommand:
+		command = common.NewCommand(
+			cmd,
+			common.Update,
+			func() {
+				cb(nil, db.Update(cmd.TableName(), map[string]interface{}{}))
+			},
+		)
 	case *common.DeleteCommand:
 		command = common.NewCommand(
 			cmd,
@@ -561,6 +582,24 @@ func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 				cb(nil, db.Delete(cmd.TableName()))
 			},
 		)
+	case *common.DropCommand:
+		command = common.NewCommand(
+			cmd,
+			common.Drop,
+			func() {
+				cb(nil, db.Drop(cmd.TableName()))
+			},
+		)
+	case *common.SelectTableCommand:
+		command = common.NewCommand(
+			cmd,
+			common.Select,
+			func() {
+				cb(db.Select(cmd.TableName()))
+			},
+		)
+	default:
+		cb(nil, fmt.Errorf("Unrecognized command type %v", reflect.TypeOf(cmd)))
 	}
 
 	return command
