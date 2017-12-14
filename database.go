@@ -261,7 +261,46 @@ func (db *database) delete(table dbTable) error {
 }
 
 func (db *database) Update(name string, values map[string]interface{}) error {
-	return errors.New("Update not implemented")
+	table, err := db.table(name)
+	if err != nil {
+		return err
+	}
+
+	dbValues, err := convertValuesMap(*table, values)
+	if err != nil {
+		return err
+	}
+
+	return db.update(*table, dbValues)
+}
+
+func (db *database) update(table dbTable, values map[string]dbType) error {
+	record, err := table.buildDBRecord(values)
+	if err != nil {
+		return err
+	}
+
+	for addr := int64(table.firstRecordBlockAddr); addr != nullBlockAddr; {
+		block, err := db.readAt(addr)
+		if err != nil {
+			return err
+		}
+
+		rb := table.loadRecordBlockBytes(block)
+		for i := range rb.dbRecords {
+			if !rb.dbRecords[i].isFree() {
+				rb.dbRecords[i] = record
+			}
+		}
+
+		if err := db.writeAt(table.recordBlockBytes(rb), addr); err != nil {
+			return err
+		}
+
+		addr = block.nextBlock()
+	}
+
+	return nil
 }
 
 func (db *database) Drop(name string) error {
