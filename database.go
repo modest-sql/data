@@ -213,6 +213,34 @@ func (db *database) delete(table dbTable) error {
 	return nil
 }
 
+
+func (db database) Drop(Tablename string) error {
+    if err := db.Delete(Tablename); err != nil {
+        return err
+    }
+
+    // Delete all records block
+    for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
+        // Read block
+        block, err := db.readAt(blockAddr)
+        if err != nil {
+            return err
+        }
+
+        // Free the record block
+        if err := db.freeBlock(blockAddr); err != nil {
+            return err
+        }
+        // Point to next record block
+        blockAddr = recordBlock.nextRecordBlock
+    }
+
+    // Delete records from system tables
+    db.Delete(TableName)
+
+    return db.deleteTable(string(table.dbTableName.bytes()))
+}
+
 func (db *database) insert(table dbTable, values map[string]dbType) error {
 	record, err := table.buildDBRecord(values)
 	if err != nil {
