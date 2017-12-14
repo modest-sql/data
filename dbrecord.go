@@ -40,3 +40,7 @@ func (r *dbRecord) insertColumnValue(value dbType, dbColumn dbColumn) {
 
 	r.dbTuple[dbColumn.name()] = value
 }
+
+func (r *dbRecord) updateColumnValue(value dbType, dbColumn dbColumn) {
+
+}

@@ -21,7 +21,7 @@ func (rb *dbRecordBlock) insertRecord(record dbRecord) bool {
 	return false
 }
 
-func (rb *dbRecordBlock) updateRecord(record dbRecord, column *dbColumn) bool {
+func (rb *dbRecordBlock) updateRecord(record dbRecord) bool {
 	for i := range rb.dbRecords {
 
 	}
