@@ -3,6 +3,7 @@ package data
 import (
 	"encoding/binary"
 	"fmt"
+	"reflect"
 
 	"github.com/modest-sql/common"
 )
@@ -205,6 +206,8 @@ func convertValuesMap(table dbTable, values map[string]interface{}) (map[string]
 			}
 
 			dbValue = newChar(column.dbTypeSize, v)
+		default:
+			return nil, fmt.Errorf("Invalid %v type on column `%s'", reflect.TypeOf(v), column.name())
 		}
 
 		dbValues[column.name()] = dbValue

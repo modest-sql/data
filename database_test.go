@@ -25,8 +25,8 @@ func TestSystemBlockSize(t *testing.T) {
 	}
 
 	values := map[string]interface{}{
-		"TABLE0.ID": 57,
-		"NAME":      "HELLO",
+		"ID":   int64(57),
+		"NAME": "HELLO",
 	}
 
 	if err := db.Insert("TABLE0", values); err != nil {
