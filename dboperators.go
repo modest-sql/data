@@ -7,7 +7,7 @@ func operatorEquals(a dbType, b dbType) bool {
 }
 
 //Read https://en.wikipedia.org/wiki/Selection_(relational_algebra)
-func (db database) selectionByAttribute(r dbSet, theta binaryOperator, a string, b string) (result dbSet) {
+func selectionByAttribute(r dbSet, theta binaryOperator, a string, b string) (result dbSet) {
 	for i := range r {
 		if theta(r[i][a], r[i][b]) {
 			result = append(result, r[i])
@@ -16,7 +16,7 @@ func (db database) selectionByAttribute(r dbSet, theta binaryOperator, a string,
 	return result
 }
 
-func (db database) selectionByValue(r dbSet, theta binaryOperator, a string, v dbType) (result dbSet) {
+func selectionByValue(r dbSet, theta binaryOperator, a string, v dbType) (result dbSet) {
 	for i := range r {
 		if theta(r[i][a], v) {
 			result = append(result, r[i])
@@ -25,7 +25,7 @@ func (db database) selectionByValue(r dbSet, theta binaryOperator, a string, v d
 	return result
 }
 
-func (db database) proyection(r dbSet, names []string) (result dbSet) {
+func proyection(r dbSet, names []string) (result dbSet) {
 	for i := range r {
 		for name := range r[i] {
 			if !containsName(name, names) {
@@ -37,24 +37,24 @@ func (db database) proyection(r dbSet, names []string) (result dbSet) {
 	return r
 }
 
-func (db database) joinByAttribute(r dbSet, s dbSet, theta binaryOperator, a string, b string) (result dbSet) {
+func joinByAttribute(r dbSet, s dbSet, theta binaryOperator, a string, b string) (result dbSet) {
 	for i := range r {
 		for j := range s {
 			result = append(result, mergeTuples(r[i], s[j]))
 		}
 	}
 
-	return db.selectionByAttribute(result, theta, a, b)
+	return selectionByAttribute(result, theta, a, b)
 }
 
-func (db database) joinByValue(r dbSet, s dbSet, theta binaryOperator, a string, v dbType) (result dbSet) {
+func joinByValue(r dbSet, s dbSet, theta binaryOperator, a string, v dbType) (result dbSet) {
 	for i := range r {
 		for j := range s {
 			result = append(result, mergeTuples(r[i], s[j]))
 		}
 	}
 
-	return db.selectionByValue(result, theta, a, v)
+	return selectionByValue(result, theta, a, v)
 }
 
 func mergeTuples(a dbTuple, b dbTuple) (result dbTuple) {

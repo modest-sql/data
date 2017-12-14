@@ -1,6 +1,7 @@
 package data
 
 import "encoding/binary"
+import "github.com/modest-sql/common"
 
 type dbTypeID uint8
 
@@ -123,6 +124,32 @@ func loadDBType(dbTypeID dbTypeID, b []byte) dbType {
 		return dbBoolean(false)
 	case dbCharTypeID:
 		return dbChar(b)
+	}
+
+	return nil
+}
+
+func castDBType(definition common.TableColumnDefiner) dbType {
+	value := definition.DefaultValue()
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case int64:
+		if _, ok := definition.(common.IntegerTableColumn); ok {
+			return dbInteger(v)
+		}
+		return dbDateTime(v)
+	case float64:
+		return dbFloat(v)
+	case bool:
+		return dbBoolean(v)
+	case string:
+		size := definition.(common.CharTableColumn).Size()
+		tmp := make(dbChar, size)
+		copy(tmp, v)
+		return tmp
 	}
 
 	return nil

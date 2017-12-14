@@ -18,6 +18,9 @@ type dbInfo struct {
 	availableBlocks      int64
 	availableBlocksFront int64
 	tables               int64
+	columns              int64
+	defaultNumerics      int64
+	defaultChars         int64
 }
 
 type database struct {
@@ -86,7 +89,20 @@ func (db *database) NewTable(name string, columnDefiners []common.TableColumnDef
 		"TABLE_NAME":         tableName,
 	}
 
-	if err := db.addTable(newDBTable(tableID, tableName, []dbColumn{}, dbInteger(firstRecordBlockAddr))); err != nil {
+	table := newDBTable(tableID, tableName, []dbColumn{}, dbInteger(firstRecordBlockAddr))
+
+	for pos, definition := range columnDefiners {
+		column, err := db.newDBColumn(table, definition, pos)
+		if err != nil {
+			return err
+		}
+
+		if err := table.addColumn(column); err != nil {
+			return err
+		}
+	}
+
+	if err := db.addTable(table); err != nil {
 		return err
 	}
 
@@ -95,7 +111,29 @@ func (db *database) NewTable(name string, columnDefiners []common.TableColumnDef
 		return err
 	}
 
-	return db.insert(db.sysTables(), values)
+	if err := db.insert(db.sysTables(), values); err != nil {
+		return err
+	}
+
+	for _, column := range table.dbColumns {
+		values := map[string]dbType{
+			"COLUMN_ID":             column.dbColumnID,
+			"TABLE_ID":              column.dbTableID,
+			"COLUMN_POSITION":       column.dbColumnPosition,
+			"COLUMN_TYPE":           dbInteger(column.dbTypeID),
+			"COLUMN_SIZE":           column.dbTypeSize,
+			"COLUMN_COUNTER":        column.dbAutoincrementCounter,
+			"COLUMN_CONSTRAINTS":    dbInteger(column.dbConstraints),
+			"DEFAULT_CONSTRAINT_ID": column.dbDefaultValueConstraintID,
+			"COLUMN_NAME":           column.dbColumnName,
+		}
+
+		if err := db.insert(db.sysColumns(), values); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (db *database) insert(table dbTable, values map[string]dbType) error {
@@ -337,17 +375,17 @@ func (db database) tableSet(table dbTable) (set dbSet, err error) {
 }
 
 func (db database) loadTables() error {
-	tablesSet, err := db.tableSet(db.dbSysTables[0])
+	tablesSet, err := db.tableSet(db.sysTables())
 	if err != nil {
 		return err
 	}
 
-	columnsSet, err := db.tableSet(db.dbSysTables[1])
+	columnsSet, err := db.tableSet(db.sysColumns())
 	if err != nil {
 		return err
 	}
 
-	result := db.joinByAttribute(tablesSet, columnsSet, operatorEquals, "SYS_TABLES.TABLE_ID", "SYS_COLUMNS.TABLE_ID")
+	result := joinByAttribute(tablesSet, columnsSet, operatorEquals, "SYS_TABLES.TABLE_ID", "SYS_COLUMNS.TABLE_ID")
 
 	tablesMap := map[string][]dbColumn{}
 	tablesRecordBlocks := map[string]dbInteger{}
