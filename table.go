@@ -6,16 +6,26 @@ type Table struct {
 }
 
 type TableColumn struct {
-	ColumnName string
-	ColumnType dbTypeID
-	ColumnSize uint16
+	ColumnName    string
+	ColumnType    dbTypeID
+	ColumnSize    uint16
+	NotNull       bool
+	Autoincrement bool
+	PrimaryKey    bool
+	ForeignKey    bool
+	DefaultValue  bool
 }
 
 func dbColumnToTableColumn(c dbColumn) TableColumn {
 	return TableColumn{
-		ColumnName: c.name(),
-		ColumnType: c.dbTypeID,
-		ColumnSize: uint16(c.dbTypeSize),
+		ColumnName:    c.name(),
+		ColumnType:    c.dbTypeID,
+		ColumnSize:    uint16(c.dbTypeSize),
+		NotNull:       c.hasConstraint(dbNotNullConstraint),
+		Autoincrement: c.hasConstraint(dbAutoincrementConstraint),
+		PrimaryKey:    c.hasConstraint(dbPrimaryKeyConstraint),
+		ForeignKey:    c.hasConstraint(dbForeignKeyConstraint),
+		DefaultValue:  c.hasConstraint(dbDefaultValueConstraint),
 	}
 }
 

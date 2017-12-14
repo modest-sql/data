@@ -553,6 +553,14 @@ func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 				cb(nil, db.Insert(cmd.TableName(), cmd.Values()))
 			},
 		)
+	case *common.DeleteCommand:
+		command = common.NewCommand(
+			cmd,
+			common.Delete,
+			func() {
+				cb(nil, db.Delete(cmd.TableName()))
+			},
+		)
 	}
 
 	return command
