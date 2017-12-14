@@ -401,3 +401,33 @@ func qualifiedIdentifier(table dbTable, identifier string) string {
 func concatTable(tableName string, columnName string) string {
 	return fmt.Sprintf("%s.%s", tableName, columnName)
 }
+
+func (db database) update(table dbTable, values map[string]dbType) error {
+
+	record, err := table.buildDBRecord(values)
+	if err != nil {
+		return err
+	}
+
+	for key := range values {
+		column, err := table.column(qualifiedIdentifier(table, key))
+		if err != nil {
+			return err
+		}
+		for addr := int64(table.firstRecordBlockAddr); addr != nullBlockAddr; {
+			block, err := db.readAt(addr)
+			if err != nil {
+				return nil
+			}
+
+			rb := table.loadRecordBlockBytes(block)
+			if rb.updateRecord(record, column) {
+				return db.writeAt(table.recordBlockBytes(rb), addr)
+			}
+
+			addr = block.nextBlock()
+		}
+	}
+
+	return nil
+}
