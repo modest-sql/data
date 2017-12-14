@@ -265,7 +265,38 @@ func (db *database) Update(name string, values map[string]interface{}) error {
 }
 
 func (db *database) Drop(name string) error {
-	return errors.New("Drop not implented")
+	table, err := db.table(name)
+	if err != nil {
+		return err
+	}
+
+	//TODO: Add where condition
+	if err := db.delete(db.sysTables()); err != nil {
+		return err
+	}
+
+	// TODO: Add where condition
+	if err := db.delete(db.sysColumns()); err != nil {
+		return err
+	}
+
+	// Delete all records block
+	for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
+		// Read block
+		block, err := db.readAt(blockAddr)
+		if err != nil {
+			return err
+		}
+
+		// Free the record block
+		if err := db.freeBlock(blockAddr); err != nil {
+			return err
+		}
+		// Point to next record block
+		blockAddr = block.nextBlock()
+	}
+
+	return db.deleteTable(table.name())
 }
 
 func (db *database) Select(name string) (*ResultSet, error) {
