@@ -231,24 +231,29 @@ func (db database) tableSet(table dbTable) (set dbSet, err error) {
 	return set, nil
 }
 
-func (db database)Delete(table dbTable) (set dbSet, err error) {
-	for i := int64(table.firstRecordBlockAddr); i != nullBlockAddr; {
-		block, err := db.readAt(i)
+func (db database) Delete(table dbTable) error {
+	for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
+		block, err := db.readAt(blockAddr)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
 		recordBlock := table.loadRecordBlockBytes(block)
-		records := recordBlock.dbRecords
-		for i := range records {
-			////////
-			}
+
+		// Free all records
+		for index := range recordBlock.dbRecords {
+			// Set freeFlag on tuple
+			recordBlock.dbRecords[index].freeFlag = freeFlag
 		}
+		// Serialize record block
+		freeBlock := table.recordBlockBytes(recordBlock)
 
-		i = block.nextBlock()
+		// Write modified block
+		if err := db.writeAt(freeBlock, blockAddr); err != nil {
+			return err
+		}
+		blockAddr = recordBlock.nextRecordBlock
 	}
-
-	return set, nil
+	return nil
 }
 
 func (db database) loadTables() error {
