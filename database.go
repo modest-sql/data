@@ -272,6 +272,49 @@ func (db *database) Select(name string) (*ResultSet, error) {
 	return nil, errors.New("Selected not implemented")
 }
 
+func (db database) update(table dbTable, values map[string]dbType) error {
+
+	record, err := table.buildDBRecord(values)
+	if err != nil {
+		return err
+	}
+
+	for key := range values {
+		column, err := table.column(qualifiedIdentifier(table, key))
+		if err != nil {
+			return err
+		}
+
+		if table.checkColumnConstraint(column.name(), column) {
+			return fmt.Errorf("Column does not have constraint")
+		}
+
+		for addr := int64(table.firstRecordBlockAddr); addr != nullBlockAddr; {
+			block, err := db.readAt(addr)
+			if err != nil {
+				return nil
+			}
+
+			rb := table.loadRecordBlockBytes(block)
+
+			dbTableID, ok := db.dbTableIDs[table.name()]
+			if !ok {
+				return fmt.Errorf("Table `%s' does not exist in database `%s'", table.name(), db.name())
+			}
+
+			for i := range db.dbTables {
+				if db.dbTables[i].dbTableID == dbTableID && rb.updateRecord(record) {
+					return db.writeAt(table.recordBlockBytes(rb), addr)
+				}
+			}
+
+			addr = block.nextBlock()
+		}
+	}
+
+	return nil
+}
+
 func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
 	return &database{
 		dbInfo:      dbInfo,

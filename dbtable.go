@@ -51,6 +51,15 @@ func (t dbTable) column(name string) (*dbColumn, error) {
 	return nil, fmt.Errorf("Table `%s' does not contain column with ID %d", t.name(), dbColumnID)
 }
 
+func (t dbTable) checkColumnConstraint(name string, column *dbColumn) bool {
+	for i := range t.dbColumns {
+		if t.dbColumns[i].dbConstraints == column.dbConstraints {
+			return true
+		}
+	}
+	return false
+}
+
 func (t *dbTable) addColumn(dbColumn dbColumn) error {
 	if dbColumn, _ := t.column(dbColumn.name()); dbColumn != nil {
 		return fmt.Errorf("Duplicate column `%s' in table `%s'", dbColumn.name(), t.name())

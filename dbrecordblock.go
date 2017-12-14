@@ -21,6 +21,13 @@ func (rb *dbRecordBlock) insertRecord(record dbRecord) bool {
 	return false
 }
 
+func (rb *dbRecordBlock) updateRecord(record dbRecord) bool {
+	for i := range rb.dbRecords {
+
+	}
+	return false
+}
+
 func (rb *dbRecordBlock) deleteAllRecords() {
 	for i := range rb.dbRecords {
 		rb.dbRecords[i].freeFlag = freeFlag
