@@ -179,6 +179,40 @@ func (db *database) Insert(name string, values map[string]interface{}) error {
 	return db.insert(*table, dbValues)
 }
 
+func (db *database) Delete(name string) error {
+	table, err := db.table(name)
+	if err != nil {
+		return err
+	}
+
+	return db.delete(*table)
+}
+
+func (db *database) delete(table dbTable) error {
+	for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
+		block, err := db.readAt(blockAddr)
+		if err != nil {
+			return err
+		}
+		recordBlock := table.loadRecordBlockBytes(block)
+
+		// Free all records
+		for index := range recordBlock.dbRecords {
+			// Set freeFlag on tuple
+			recordBlock.dbRecords[index].freeFlag = freeFlag
+		}
+		// Serialize record block
+		freeBlock := table.recordBlockBytes(recordBlock)
+
+		// Write modified block
+		if err := db.writeAt(freeBlock, blockAddr); err != nil {
+			return err
+		}
+		blockAddr = recordBlock.nextRecordBlock
+	}
+	return nil
+}
+
 func (db *database) insert(table dbTable, values map[string]dbType) error {
 	record, err := table.buildDBRecord(values)
 	if err != nil {
