@@ -33,10 +33,6 @@ func selection(r dbSet, theta common.Expression) (result dbSet) {
 func projection(r dbSet, names []string) (result dbSet) {
 	for i := range r {
 		for name := range r[i] {
-			if name == "*" {
-				break
-			}
-
 			if !containsName(name, names) {
 				delete(r[i], name)
 			}
@@ -82,7 +78,7 @@ func mergeTuples(a dbTuple, b dbTuple) (result dbTuple) {
 
 func containsName(name string, names []string) bool {
 	for i := range names {
-		if name == names[i] {
+		if names[i] == "*" || name == names[i] {
 			return true
 		}
 	}
