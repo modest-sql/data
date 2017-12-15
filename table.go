@@ -41,9 +41,12 @@ func dbTableToTable(t dbTable) *Table {
 	}
 }
 
-func (db Database) AllTables() (tables []*Table) {
+func (db Database) AllTables() []*Table {
+	tables := []*Table{}
+
 	for _, t := range db.dbTables {
 		tables = append(tables, dbTableToTable(t))
 	}
+
 	return tables
 }
