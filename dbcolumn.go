@@ -37,7 +37,7 @@ type dbColumn struct {
 	dbConstraints              dbConstraintType
 }
 
-func (db *database) newDBColumn(table dbTable, definition common.TableColumnDefiner, pos int) (column dbColumn, err error) {
+func (db *Database) newDBColumn(table dbTable, definition common.TableColumnDefiner, pos int) (column dbColumn, err error) {
 	columnID := db.columns + 1
 
 	columnName := make(dbChar, maxNameLength)
@@ -146,7 +146,7 @@ func (dc *dbColumn) increment() error {
 	return nil
 }
 
-func (db *database) newDefaultNumeric(value dbType) (dbInteger, error) {
+func (db *Database) newDefaultNumeric(value dbType) (dbInteger, error) {
 	defaultID := dbInteger(db.defaultNumerics + 1)
 
 	values := map[string]dbType{
@@ -165,7 +165,7 @@ func (db *database) newDefaultNumeric(value dbType) (dbInteger, error) {
 	return defaultID, nil
 }
 
-func (db *database) newDefaultChar(value dbType) (dbInteger, error) {
+func (db *Database) newDefaultChar(value dbType) (dbInteger, error) {
 	defaultID := dbInteger(db.defaultChars + 1)
 
 	tmp := make(dbChar, maxCharLength)

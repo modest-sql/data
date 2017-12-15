@@ -25,7 +25,7 @@ type dbInfo struct {
 	defaultChars         int64
 }
 
-type database struct {
+type Database struct {
 	dbInfo
 	dbTableIDs  map[string]dbInteger
 	dbTables    []dbTable
@@ -33,7 +33,7 @@ type database struct {
 	dbFile      *os.File
 }
 
-func NewDatabase(path string, blockSize int64) (*database, error) {
+func NewDatabase(path string, blockSize int64) (*Database, error) {
 	sysBlockSize := systemBlockSize()
 	if blockSize <= 0 {
 		return nil, errors.New("Block size must be greater than 0")
@@ -74,7 +74,7 @@ func NewDatabase(path string, blockSize int64) (*database, error) {
 	return db, nil
 }
 
-func LoadDatabase(path string) (*database, error) {
+func LoadDatabase(path string) (*Database, error) {
 	dbFile, err := os.OpenFile(path, os.O_RDWR, 0666)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func LoadDatabase(path string) (*database, error) {
 	return db, nil
 }
 
-func (db *database) NewTable(name string, columnDefiners []common.TableColumnDefiner) error {
+func (db *Database) NewTable(name string, columnDefiners []common.TableColumnDefiner) error {
 	tableName := make(dbChar, maxNameLength)
 	copy(tableName, name)
 
@@ -166,7 +166,7 @@ func (db *database) NewTable(name string, columnDefiners []common.TableColumnDef
 	return nil
 }
 
-func (db *database) Insert(name string, values map[string]interface{}) error {
+func (db *Database) Insert(name string, values map[string]interface{}) error {
 	table, err := db.table(name)
 	if err != nil {
 		return err
@@ -180,7 +180,7 @@ func (db *database) Insert(name string, values map[string]interface{}) error {
 	return db.insert(*table, dbValues)
 }
 
-func (db *database) insert(table dbTable, values map[string]dbType) error {
+func (db *Database) insert(table dbTable, values map[string]dbType) error {
 	record, err := table.buildDBRecord(values)
 	if err != nil {
 		return err
@@ -226,7 +226,7 @@ func (db *database) insert(table dbTable, values map[string]dbType) error {
 	return db.writeAt(table.recordBlockBytes(rb), newAddr)
 }
 
-func (db *database) Delete(name string, condition common.Expression) error {
+func (db *Database) Delete(name string, condition common.Expression) error {
 	table, err := db.table(name)
 	if err != nil {
 		return err
@@ -235,7 +235,7 @@ func (db *database) Delete(name string, condition common.Expression) error {
 	return db.delete(*table, condition)
 }
 
-func (db *database) delete(table dbTable, condition common.Expression) error {
+func (db *Database) delete(table dbTable, condition common.Expression) error {
 	for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
 		block, err := db.readAt(blockAddr)
 		if err != nil {
@@ -262,7 +262,7 @@ func (db *database) delete(table dbTable, condition common.Expression) error {
 	return nil
 }
 
-func (db *database) Update(cmd *common.UpdateTableCommand) error {
+func (db *Database) Update(cmd *common.UpdateTableCommand) error {
 	table, err := db.table(cmd.TableName())
 	if err != nil {
 		return err
@@ -271,7 +271,7 @@ func (db *database) Update(cmd *common.UpdateTableCommand) error {
 	return db.update(*table, cmd)
 }
 
-func (db *database) update(table dbTable, cmd *common.UpdateTableCommand) error {
+func (db *Database) update(table dbTable, cmd *common.UpdateTableCommand) error {
 
 	for addr := int64(table.firstRecordBlockAddr); addr != nullBlockAddr; {
 		block, err := db.readAt(addr)
@@ -308,7 +308,7 @@ func (db *database) update(table dbTable, cmd *common.UpdateTableCommand) error 
 	return nil
 }
 
-func (db *database) Drop(name string) error {
+func (db *Database) Drop(name string) error {
 	table, err := db.table(name)
 	if err != nil {
 		return err
@@ -343,7 +343,7 @@ func (db *database) Drop(name string) error {
 	return db.deleteTable(table.name())
 }
 
-func (db *database) Select(cmd *common.SelectTableCommand) (dbSet, error) {
+func (db *Database) Select(cmd *common.SelectTableCommand) (dbSet, error) {
 	table, err := db.table(cmd.TableName())
 	if err != nil {
 		return nil, err
@@ -382,8 +382,8 @@ func (db *database) Select(cmd *common.SelectTableCommand) (dbSet, error) {
 	return result, nil
 }
 
-func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
-	return &database{
+func newDatabase(dbInfo dbInfo, dbFile *os.File) *Database {
+	return &Database{
 		dbInfo:      dbInfo,
 		dbTableIDs:  map[string]dbInteger{},
 		dbSysTables: newSysTables(),
@@ -391,23 +391,23 @@ func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
 	}
 }
 
-func (db database) sysTables() dbTable {
+func (db Database) sysTables() dbTable {
 	return db.dbSysTables[0]
 }
 
-func (db database) sysColumns() dbTable {
+func (db Database) sysColumns() dbTable {
 	return db.dbSysTables[1]
 }
 
-func (db database) sysNumerics() dbTable {
+func (db Database) sysNumerics() dbTable {
 	return db.dbSysTables[2]
 }
 
-func (db database) sysChars() dbTable {
+func (db Database) sysChars() dbTable {
 	return db.dbSysTables[3]
 }
 
-func (db database) name() string {
+func (db Database) name() string {
 	filename := filepath.Base(db.dbFile.Name())
 
 	n := strings.LastIndexByte(filename, '.')
@@ -418,7 +418,7 @@ func (db database) name() string {
 	return filename
 }
 
-func (db *database) readDbInfo() error {
+func (db *Database) readDbInfo() error {
 	blockSizeB := make([]byte, 8)
 	if _, err := db.dbFile.ReadAt(blockSizeB, 0); err != nil {
 		return err
@@ -443,7 +443,7 @@ func (db *database) readDbInfo() error {
 	return nil
 }
 
-func (db database) writeDbInfo() error {
+func (db Database) writeDbInfo() error {
 	if _, err := db.dbFile.Seek(0, 0); err != nil {
 		return err
 	}
@@ -459,10 +459,10 @@ func (db database) writeDbInfo() error {
 	return nil
 }
 
-func (db database) table(name string) (*dbTable, error) {
+func (db Database) table(name string) (*dbTable, error) {
 	dbTableID, ok := db.dbTableIDs[name]
 	if !ok {
-		return nil, fmt.Errorf("Table `%s' does not exist in database `%s'", name, db.name())
+		return nil, fmt.Errorf("Table `%s' does not exist in Database `%s'", name, db.name())
 	}
 
 	for i := range db.dbTables {
@@ -474,9 +474,9 @@ func (db database) table(name string) (*dbTable, error) {
 	return nil, fmt.Errorf("Database `%s' does not contain table with ID %d", db.name(), dbTableID)
 }
 
-func (db *database) addTable(dbTable dbTable) error {
+func (db *Database) addTable(dbTable dbTable) error {
 	if dbTable, _ := db.table(dbTable.name()); dbTable != nil {
-		return fmt.Errorf("Duplicate table `%s' in database `%s'", dbTable.name(), db.name())
+		return fmt.Errorf("Duplicate table `%s' in Database `%s'", dbTable.name(), db.name())
 	}
 
 	db.dbTableIDs[dbTable.name()] = dbTable.dbTableID
@@ -484,10 +484,10 @@ func (db *database) addTable(dbTable dbTable) error {
 	return nil
 }
 
-func (db *database) deleteTable(name string) error {
+func (db *Database) deleteTable(name string) error {
 	dbTableID, ok := db.dbTableIDs[name]
 	if !ok {
-		return fmt.Errorf("Table `%s' does not exist in database `%s'", name, db.name())
+		return fmt.Errorf("Table `%s' does not exist in Database `%s'", name, db.name())
 	}
 
 	for i := range db.dbTables {
@@ -502,7 +502,7 @@ func (db *database) deleteTable(name string) error {
 	return fmt.Errorf("Database `%s' does not contain table with ID %d", db.name(), dbTableID)
 }
 
-func (db database) blockOffset(addr int64) (int64, error) {
+func (db Database) blockOffset(addr int64) (int64, error) {
 	if addr <= 0 {
 		return 0, errors.New("Address must be greater than 0")
 	}
@@ -510,7 +510,7 @@ func (db database) blockOffset(addr int64) (int64, error) {
 	return db.dbInfo.blockSize * (addr - 1), nil
 }
 
-func (db database) writeAt(b []byte, addr int64) error {
+func (db Database) writeAt(b []byte, addr int64) error {
 	blockPaddingLen := db.dbInfo.blockSize - int64(len(b))
 	if blockPaddingLen < 0 {
 		return errors.New("Byte slice is greater than block size")
@@ -525,7 +525,7 @@ func (db database) writeAt(b []byte, addr int64) error {
 	return err
 }
 
-func (db database) readAt(addr int64) (dbBlock, error) {
+func (db Database) readAt(addr int64) (dbBlock, error) {
 	blockOffset, err := db.blockOffset(addr)
 	if err != nil {
 		return nil, err
@@ -539,7 +539,7 @@ func (db database) readAt(addr int64) (dbBlock, error) {
 	return b, nil
 }
 
-func (db *database) allocBlock() (int64, error) {
+func (db *Database) allocBlock() (int64, error) {
 	if db.dbInfo.availableBlocks == 0 {
 		addr := db.dbInfo.blocks + 1
 
@@ -562,7 +562,7 @@ func (db *database) allocBlock() (int64, error) {
 	return addr, nil
 }
 
-func (db *database) freeBlock(addr int64) error {
+func (db *Database) freeBlock(addr int64) error {
 	block, err := db.readAt(addr)
 	if err != nil {
 		return err
@@ -578,7 +578,7 @@ func (db *database) freeBlock(addr int64) error {
 	return nil
 }
 
-func (db database) tableSet(table dbTable) (set dbSet, err error) {
+func (db Database) tableSet(table dbTable) (set dbSet, err error) {
 	for i := int64(table.firstRecordBlockAddr); i != nullBlockAddr; {
 		block, err := db.readAt(i)
 		if err != nil {
@@ -599,7 +599,7 @@ func (db database) tableSet(table dbTable) (set dbSet, err error) {
 	return set, nil
 }
 
-func (db *database) loadTables() error {
+func (db *Database) loadTables() error {
 	tablesSet, err := db.tableSet(db.sysTables())
 	if err != nil {
 		return err
@@ -658,7 +658,7 @@ func (db *database) loadTables() error {
 CommandFactory creates instances of common.Command according to command object received
 as parameter. Once the command is run, execution is moved to the callback function received as parameter.
 */
-func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error)) (command common.Command) {
+func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error)) (command common.Command) {
 	switch cmd := cmd.(type) {
 	case *common.CreateTableCommand:
 		command = common.NewCommand(
