@@ -371,7 +371,7 @@ func (db *Database) Select(cmd *common.SelectTableCommand) (dbSet, error) {
 
 	selections := []string{}
 	for _, selector := range cmd.ProjectedColumns() {
-		selections = append(selections, selector.(common.TableColumnSelector).ColumnName())
+		selections = append(selections, selector.(*common.TableColumnSelector).ColumnName())
 	}
 
 	result = projection(result, selections)
