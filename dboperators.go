@@ -1,5 +1,9 @@
 package data
 
+import (
+	"github.com/modest-sql/common"
+)
+
 type binaryOperator func(dbType, dbType) bool
 
 func operatorEquals(a dbType, b dbType) bool {
@@ -16,18 +20,23 @@ func selectionByAttribute(r dbSet, theta binaryOperator, a string, b string) (re
 	return result
 }
 
-func selectionByValue(r dbSet, theta binaryOperator, a string, v dbType) (result dbSet) {
+//Read https://en.wikipedia.org/wiki/Selection_(relational_algebra)
+func selection(r dbSet, theta common.Expression) (result dbSet) {
 	for i := range r {
-		if theta(r[i][a], v) {
+		if theta.Evaluate(r[i].stdMap()).(bool) {
 			result = append(result, r[i])
 		}
 	}
 	return result
 }
 
-func proyection(r dbSet, names []string) (result dbSet) {
+func projection(r dbSet, names []string) (result dbSet) {
 	for i := range r {
 		for name := range r[i] {
+			if name == "*" {
+				break
+			}
+
 			if !containsName(name, names) {
 				delete(r[i], name)
 			}
@@ -47,14 +56,14 @@ func joinByAttribute(r dbSet, s dbSet, theta binaryOperator, a string, b string)
 	return selectionByAttribute(result, theta, a, b)
 }
 
-func joinByValue(r dbSet, s dbSet, theta binaryOperator, a string, v dbType) (result dbSet) {
+func join(r dbSet, s dbSet, theta common.Expression) (result dbSet) {
 	for i := range r {
 		for j := range s {
 			result = append(result, mergeTuples(r[i], s[j]))
 		}
 	}
 
-	return selectionByValue(result, theta, a, v)
+	return selection(result, theta)
 }
 
 func mergeTuples(a dbTuple, b dbTuple) (result dbTuple) {

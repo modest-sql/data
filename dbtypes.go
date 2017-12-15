@@ -215,3 +215,20 @@ func convertValuesMap(table dbTable, values map[string]interface{}) (map[string]
 
 	return dbValues, nil
 }
+
+func stdType(value dbType) interface{} {
+	switch v := value.(type) {
+	case dbInteger:
+		return int64(v)
+	case dbFloat:
+		return float64(v)
+	case dbDateTime:
+		return int64(v)
+	case dbBoolean:
+		return bool(v)
+	case dbChar:
+		return trimName(v)
+	}
+
+	return nil
+}

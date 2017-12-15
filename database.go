@@ -226,16 +226,16 @@ func (db *database) insert(table dbTable, values map[string]dbType) error {
 	return db.writeAt(table.recordBlockBytes(rb), newAddr)
 }
 
-func (db *database) Delete(name string) error {
+func (db *database) Delete(name string, condition common.Expression) error {
 	table, err := db.table(name)
 	if err != nil {
 		return err
 	}
 
-	return db.delete(*table)
+	return db.delete(*table, condition)
 }
 
-func (db *database) delete(table dbTable) error {
+func (db *database) delete(table dbTable, condition common.Expression) error {
 	for blockAddr := int64(table.firstRecordBlockAddr); blockAddr != nullBlockAddr; {
 		block, err := db.readAt(blockAddr)
 		if err != nil {
@@ -246,7 +246,9 @@ func (db *database) delete(table dbTable) error {
 		// Free all records
 		for index := range recordBlock.dbRecords {
 			// Set freeFlag on tuple
-			recordBlock.dbRecords[index].freeFlag = freeFlag
+			if condition == nil || condition.Evaluate(recordBlock.dbRecords[index].dbTuple.stdMap()).(bool) {
+				recordBlock.dbRecords[index].freeFlag = freeFlag
+			}
 		}
 		// Serialize record block
 		freeBlock := table.recordBlockBytes(recordBlock)
@@ -260,25 +262,16 @@ func (db *database) delete(table dbTable) error {
 	return nil
 }
 
-func (db *database) Update(name string, values map[string]interface{}) error {
-	table, err := db.table(name)
+func (db *database) Update(cmd *common.UpdateTableCommand) error {
+	table, err := db.table(cmd.TableName())
 	if err != nil {
 		return err
 	}
 
-	dbValues, err := convertValuesMap(*table, values)
-	if err != nil {
-		return err
-	}
-
-	return db.update(*table, dbValues)
+	return db.update(*table, cmd)
 }
 
-func (db *database) update(table dbTable, values map[string]dbType) error {
-	record, err := table.buildDBRecord(values)
-	if err != nil {
-		return err
-	}
+func (db *database) update(table dbTable, cmd *common.UpdateTableCommand) error {
 
 	for addr := int64(table.firstRecordBlockAddr); addr != nullBlockAddr; {
 		block, err := db.readAt(addr)
@@ -289,7 +282,19 @@ func (db *database) update(table dbTable, values map[string]dbType) error {
 		rb := table.loadRecordBlockBytes(block)
 		for i := range rb.dbRecords {
 			if !rb.dbRecords[i].isFree() {
-				rb.dbRecords[i] = record
+				if cmd.Condition() == nil || cmd.Condition().Evaluate(rb.dbRecords[i].dbTuple.stdMap()).(bool) {
+					dbValues, err := convertValuesMap(table, cmd.Values(rb.dbRecords[i].dbTuple.stdMap()))
+					if err != nil {
+						return err
+					}
+
+					record, err := table.buildDBRecord(dbValues)
+					if err != nil {
+						return err
+					}
+
+					rb.dbRecords[i] = record
+				}
 			}
 		}
 
@@ -310,12 +315,12 @@ func (db *database) Drop(name string) error {
 	}
 
 	//TODO: Add where condition
-	if err := db.delete(db.sysTables()); err != nil {
+	if err := db.delete(db.sysTables(), nil); err != nil {
 		return err
 	}
 
 	// TODO: Add where condition
-	if err := db.delete(db.sysColumns()); err != nil {
+	if err := db.delete(db.sysColumns(), nil); err != nil {
 		return err
 	}
 
@@ -338,8 +343,43 @@ func (db *database) Drop(name string) error {
 	return db.deleteTable(table.name())
 }
 
-func (db *database) Select(name string) (*ResultSet, error) {
-	return nil, errors.New("Selected not implemented")
+func (db *database) Select(cmd *common.SelectTableCommand) (dbSet, error) {
+	table, err := db.table(cmd.TableName())
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := db.tableSet(*table)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, joinCmd := range cmd.Joins() {
+		target, err := db.table(joinCmd.TargetTable())
+		if err != nil {
+			return nil, err
+		}
+
+		targetSet, err := db.tableSet(*target)
+		if err != nil {
+			return nil, err
+		}
+
+		result = join(result, targetSet, joinCmd.FilterCriteria())
+	}
+
+	if cmd.Condition() != nil {
+		result = selection(result, cmd.Condition())
+	}
+
+	selections := []string{}
+	for _, selector := range cmd.ProjectedColumns() {
+		selections = append(selections, selector.(common.TableColumnSelector).ColumnName())
+	}
+
+	result = projection(result, selections)
+
+	return result, nil
 }
 
 func newDatabase(dbInfo dbInfo, dbFile *os.File) *database {
@@ -641,7 +681,7 @@ func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Update,
 			func() {
-				cb(nil, db.Update(cmd.TableName(), map[string]interface{}{}))
+				cb(nil, db.Update(cmd))
 			},
 		)
 	case *common.DeleteCommand:
@@ -649,7 +689,7 @@ func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Delete,
 			func() {
-				cb(nil, db.Delete(cmd.TableName()))
+				cb(nil, db.Delete(cmd.TableName(), cmd.Condition()))
 			},
 		)
 	case *common.DropCommand:
@@ -665,7 +705,7 @@ func (db *database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Select,
 			func() {
-				cb(db.Select(cmd.TableName()))
+				cb(db.Select(cmd))
 			},
 		)
 	default:
