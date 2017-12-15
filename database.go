@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"syscall"
 
 	"github.com/modest-sql/common"
 )
@@ -34,13 +33,8 @@ type Database struct {
 }
 
 func NewDatabase(path string, blockSize int64) (*Database, error) {
-	sysBlockSize := systemBlockSize()
 	if blockSize <= 0 {
 		return nil, errors.New("Block size must be greater than 0")
-	}
-
-	if blockSize%sysBlockSize != 0 {
-		return nil, fmt.Errorf("Block size must be multiple of disk block size (%d)", sysBlockSize)
 	}
 
 	dbFile, err := os.Create(path)
@@ -713,12 +707,6 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 	}
 
 	return command
-}
-
-func systemBlockSize() int64 {
-	var stat syscall.Stat_t
-	syscall.Stat(os.DevNull, &stat)
-	return int64(stat.Blksize)
 }
 
 func splitIdentifier(identifier string) (tableName string, columnName string) {
