@@ -29,19 +29,19 @@ func dbColumnToTableColumn(c dbColumn) TableColumn {
 	}
 }
 
-func dbTableToTable(t dbTable) Table {
+func dbTableToTable(t dbTable) *Table {
 	var columns []TableColumn
 	for _, c := range t.dbColumns {
 		columns = append(columns, dbColumnToTableColumn(c))
 	}
 
-	return Table{
+	return &Table{
 		TableName:    t.name(),
 		TableColumns: columns,
 	}
 }
 
-func (db Database) AllTables() (tables []Table) {
+func (db Database) AllTables() (tables []*Table) {
 	for _, t := range db.dbTables {
 		tables = append(tables, dbTableToTable(t))
 	}

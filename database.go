@@ -718,7 +718,7 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 func systemBlockSize() int64 {
 	var stat syscall.Stat_t
 	syscall.Stat(os.DevNull, &stat)
-	return stat.Blksize
+	return int64(stat.Blksize)
 }
 
 func splitIdentifier(identifier string) (tableName string, columnName string) {
