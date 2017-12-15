@@ -283,12 +283,14 @@ func (db *Database) update(table dbTable, cmd *common.UpdateTableCommand) error 
 						return err
 					}
 
-					record, err := table.buildDBRecord(dbValues)
-					if err != nil {
-						return err
-					}
+					for key, value := range dbValues {
+						column, err := table.column(key)
+						if err != nil {
+							return err
+						}
 
-					rb.dbRecords[i] = record
+						rb.dbRecords[i].insertColumnValue(value, *column)
+					}
 				}
 			}
 		}
