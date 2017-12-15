@@ -240,7 +240,8 @@ func (db *Database) delete(table dbTable, condition common.Expression) error {
 		// Free all records
 		for index := range recordBlock.dbRecords {
 			// Set freeFlag on tuple
-			if condition == nil || condition.Evaluate(recordBlock.dbRecords[index].dbTuple.stdMap()).(bool) {
+			symbols := recordBlock.dbRecords[index].dbTuple.stdMap()
+			if condition == nil || condition.Evaluate(symbols).(bool) {
 				recordBlock.dbRecords[index].freeFlag = freeFlag
 			}
 		}
@@ -302,19 +303,21 @@ func (db *Database) update(table dbTable, cmd *common.UpdateTableCommand) error 
 	return nil
 }
 
+func dropCondition(tableName string, alias string, value int64) common.Expression {
+	return common.NewEqCommon(common.NewIdCommon(tableName, alias), common.NewIntCommon(value))
+}
+
 func (db *Database) Drop(name string) error {
 	table, err := db.table(name)
 	if err != nil {
 		return err
 	}
 
-	//TODO: Add where condition
-	if err := db.delete(db.sysTables(), nil); err != nil {
+	if err := db.delete(db.sysTables(), dropCondition("SYS_TABLES", "TABLE_ID", int64(table.dbTableID))); err != nil {
 		return err
 	}
 
-	// TODO: Add where condition
-	if err := db.delete(db.sysColumns(), nil); err != nil {
+	if err := db.delete(db.sysColumns(), dropCondition("SYS_COLUMNS", "TABLE_ID", int64(table.dbTableID))); err != nil {
 		return err
 	}
 

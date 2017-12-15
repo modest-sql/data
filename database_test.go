@@ -41,10 +41,6 @@ func TestSystemBlockSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := db.Delete("TABLE0", nil); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := db.Insert("TABLE0", values); err != nil {
 		t.Fatal(err)
 	}
@@ -53,20 +49,14 @@ func TestSystemBlockSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	values = map[string]interface{}{
-		"ID":   int64(999),
-		"NAME": "AAAAAAAA",
+	if err := db.Drop("TABLE5"); err != nil {
+		t.Fatal(err)
 	}
 
-	table0, err := db.table("TABLE0")
+	tablesSet, err := db.tableSet(db.sysTables())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	set, err := db.tableSet(*table0)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println(set)
+	fmt.Println(tablesSet[5])
 }
