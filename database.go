@@ -340,7 +340,7 @@ func (db *Database) Drop(name string) error {
 	return db.deleteTable(table.name())
 }
 
-func (db *Database) Select(cmd *common.SelectTableCommand) (dbSet, error) {
+func (db *Database) Select(cmd *common.SelectTableCommand) ([]map[string]interface{}, error) {
 	table, err := db.table(cmd.TableName())
 	if err != nil {
 		return nil, err
@@ -376,7 +376,7 @@ func (db *Database) Select(cmd *common.SelectTableCommand) (dbSet, error) {
 
 	result = projection(result, selections)
 
-	return result, nil
+	return result.stdSet(), nil
 }
 
 func newDatabase(dbInfo dbInfo, dbFile *os.File) *Database {

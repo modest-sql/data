@@ -184,9 +184,15 @@ func (t dbTable) loadRecordBlockBytes(b []byte) dbRecordBlock {
 
 		valueOffset := freeFlagSize + len(record.nulls)
 		copy(record.nulls, rs[freeFlagSize:valueOffset])
-		for _, column := range t.dbColumns {
+		for i, column := range t.dbColumns {
 			nextValueOffset := valueOffset + int(column.dbTypeSize)
-			record.dbTuple[column.name()] = loadDBType(column.dbTypeID, rs[valueOffset:nextValueOffset])
+
+			var value dbType
+			if !record.nulls.At(uint(i)) {
+				value = loadDBType(column.dbTypeID, rs[valueOffset:nextValueOffset])
+			}
+			record.dbTuple[column.name()] = value
+
 			valueOffset = nextValueOffset
 		}
 

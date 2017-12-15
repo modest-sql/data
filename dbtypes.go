@@ -174,6 +174,11 @@ func convertValuesMap(table dbTable, values map[string]interface{}) (map[string]
 			return nil, err
 		}
 
+		if value == nil {
+			dbValues[column.name()] = nil
+			continue
+		}
+
 		var dbValue dbType
 		switch v := value.(type) {
 		case int64:
