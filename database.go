@@ -664,6 +664,11 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Create,
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						cb(nil, errors.New(r.(string)))
+					}
+				}()
 				cb(nil, db.NewTable(cmd.TableName(), cmd.TableColumnDefiners()))
 			},
 		)
@@ -672,6 +677,11 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Insert,
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						cb(nil, errors.New(r.(string)))
+					}
+				}()
 				cb(nil, db.Insert(cmd.TableName(), cmd.Values()))
 			},
 		)
@@ -680,6 +690,11 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Update,
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						cb(nil, errors.New(r.(string)))
+					}
+				}()
 				cb(nil, db.Update(cmd))
 			},
 		)
@@ -688,6 +703,11 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Delete,
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						cb(nil, errors.New(r.(string)))
+					}
+				}()
 				cb(nil, db.Delete(cmd.TableName(), cmd.Condition()))
 			},
 		)
@@ -696,6 +716,11 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Drop,
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						cb(nil, errors.New(r.(string)))
+					}
+				}()
 				cb(nil, db.Drop(cmd.TableName()))
 			},
 		)
@@ -704,6 +729,11 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			cmd,
 			common.Select,
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						cb(nil, errors.New(r.(string)))
+					}
+				}()
 				cb(db.Select(cmd))
 			},
 		)
