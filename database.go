@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -667,7 +666,7 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Println(r)
+						cb(nil, errors.New(r.(string)))
 					}
 				}()
 				cb(nil, db.NewTable(cmd.TableName(), cmd.TableColumnDefiners()))
@@ -680,7 +679,7 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Println(r)
+						cb(nil, errors.New(r.(string)))
 					}
 				}()
 				cb(nil, db.Insert(cmd.TableName(), cmd.Values()))
@@ -693,7 +692,7 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Println(r)
+						cb(nil, errors.New(r.(string)))
 					}
 				}()
 				cb(nil, db.Update(cmd))
@@ -706,7 +705,7 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Println(r)
+						cb(nil, errors.New(r.(string)))
 					}
 				}()
 				cb(nil, db.Delete(cmd.TableName(), cmd.Condition()))
@@ -719,7 +718,7 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Println(r)
+						cb(nil, errors.New(r.(string)))
 					}
 				}()
 				cb(nil, db.Drop(cmd.TableName()))
@@ -732,7 +731,7 @@ func (db *Database) CommandFactory(cmd interface{}, cb func(interface{}, error))
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Println(r)
+						cb(nil, errors.New(r.(string)))
 					}
 				}()
 				cb(db.Select(cmd))
